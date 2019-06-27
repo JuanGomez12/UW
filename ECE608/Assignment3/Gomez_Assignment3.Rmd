@@ -1,0 +1,465 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+ECE 608 (Spring 2019) Assignment 3.
+Professor: Jason Au
+Student: Juan Manuel Gomez Gonzalez
+
+
+Information: 
+ECE 608 Assignment #3: ANOVAs and post-hoc tests
+
+First, the required libraries need to be loaded:
+```{r Libraries load}
+library(car)
+library(e1071)
+library(tidyverse)
+library(ez)
+library(grid)
+library(gridExtra)
+```
+
+It is imperative that the dataset is loaded correctly:
+```{r DataFrame load}
+#df <- read_csv(file.choose())
+df <- data.table::fread("ECE608_A3_BloodFlow.csv")
+```
+
+The resulting DataFrame (DF) contains the related information of the 96 subjects plus their Blood Flow values. However, some samples of the DF contain missing values, which can be dealt by using the na.omit() function:
+```{r DataFrame preprocessing}
+df <- na.omit(df)
+```
+The resulting 59 observations can be used correctly for the solution of this assignment. The units for the blood flow are not given, so will be assumed to be in ml/s
+
+# Question 1
+For this question, you do not have to check assumptions: [4 marks] 
+
+## a. Conduct the appropriate t-test for the effect of sex on Flow at T0. What is the t value? 
+First, the mean and standard deviation (SD) are needed in order to properly conclude based on our results:
+```{r Q1.a mean and SD}
+df %>% 
+  group_by(Sex) %>% 
+  summarise(mean_T0 = mean(T0), SD_T0=sd(T0))
+```
+
+A two-tailed, unpaired t-test will be used to examine the differences in blood flow at T0 due to the effect of the sex of the person. Statistical significance will be interpreted at alpha = 0.05.
+```{r Q1.a t-test}
+t.test(formula = T0~factor(Sex), data = df, alternative = "two.sided", var.equal = FALSE, paired = FALSE)
+```
+Mean blood flow in males was found to be larger in comparison to females in time 0 of the exercise experiment (133.02±42.05 vs 86.71±40.45; t=-4.19, P<0.01).
+
+## b. Conduct a one-way ANOVA for the effect of sex on Flow at T0. What is the F value?
+A one-way ANOVA will be used to examine the difference in blood flow due to the sex of the person doing the exercise at time 0. Statistical significance will be interpreted at alpha = 0.05.
+```{r Q1.b ANOVA, warning=FALSE, message = FALSE}
+df.ez <- ezANOVA(data = df, #dataset
+                 dv = T0, #dependent variable you are comparing between
+                 wid = ID, #who are the individuals
+                 between = Sex,
+                 type = 3, #The way it calculates the sum of squares
+                 return_aov = TRUE)
+df.ez[['ANOVA']]
+```
+A significant main effect for Sex was found in the dataset (F=17.21; P<0.01). 
+
+It is possible to recalculate the mean and standard deviation of the samples:
+```{r Q1.b mean and SD}
+df %>% 
+  group_by(Sex) %>% 
+  summarise(mean_T0 = mean(T0), SD_T0=sd(T0))
+```
+
+Post-hoc analysis will be done using Tukey's Honestly Significant Difference (HSD) test. Again, statistical significance will be interpreted at alpha = 0.05.
+
+```{r Q1.b Post-hoc: Tukey HSD}
+TukeyHSD(x = df.ez[["aov"]])
+```
+Post-hoc analysis revealed that the males had a significantly larger blood flow compared to females during T0 (133.02±42.05 vs 86.71±40.45; P<0.01) .
+
+## c. How does your t value squared (t2) compare to your F value? In general, what would this signify? 
+First, we need to obtain t squared:
+```{r Q1.c t squared}
+(-4.19)^2
+```
+Comparing the squared t value to the F value, it can be seen that the t value is the square root of the f value (approximately, this may be due to various factors like rounding of the decimals or the floating-point number representation in computers). This indicates that both statistics are related and would mean that an ANOVA could be seen as a somewhat more general approach to a t-test for multiple comparison groups.
+
+# Question 2
+For this question, check assumptions and make the appropriate data transformations: [6 marks] 
+## a. Run a one-way ANOVA to examine whether Flow differs by exercise condition. Report the ANOVA main effects in a publishable single-line summary.  
+First, the DF must be modified to a long format:
+```{r DF long transformation}
+df_long <- df %>% 
+  gather('T0','T30', 'T60', 'T90', 'T120', key = "Time", value = "BloodFlow") #Put it into long format data
+```
+
+Afterwards, a one-way ANOVA will be used to examine the difference in blood flow due to the exercise condition. Statistical significance will be interpreted at alpha = 0.05.
+```{r Q2.a ANOVA, warning = FALSE, message = FALSE}
+df_long.ez <- ezANOVA(data = df_long, #dataset
+                 dv = BloodFlow, #dependent variable you are comparing between
+                 wid = ID, #who are the individuals
+                 between = Cond, #between variable
+                 type = 3,
+                 return_aov = TRUE)
+df_long.ez[['ANOVA']]
+```
+  
+To make sure that these results are correct, normality of the residuals and Homogeneity of the Variance (HoV) must be checked. First the normality:
+```{r Q2.a Normality test: QQ Plot, fig.width=10, fig.height = 6}
+plot_base <-  ggplot(tibble(val = df_long.ez[["aov"]][["residuals"]]), aes(sample = val))
+plotQQ <- plot_base + stat_qq(colour = "turquoise3") + stat_qq_line(colour = "turquoise4") + labs(y= "Sample Quantiles", x = "Theoretical Quantiles") + theme_light()
+
+plot_base <- ggplot(tibble(val = df_long.ez[["aov"]][["residuals"]]), aes(x = val))
+plotHist <-  plot_base + geom_histogram(aes(y = ..density..), bins = 10, colour = "turquoise3", fill = "turquoise4", alpha = 0.5, position = "identity") +
+        geom_density(alpha=0.1, color = "turquoise4") + labs(y= "Density", x = "Residuals") + theme_light()
+
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 1. QQ-Plot (left) and Histogram (right) of the residuals from the ANOVA for Question 2", 
+           gp = gpar(fontsize=9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+plot_layout <- rbind(c(1,2), c(3,3))
+
+# Plot everything
+grid.arrange(plotQQ, plotHist, figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
+```
+Figure 1 indicates that the residuals appear to follow a normal distribution. The skewness, kurtosis and the Kolmogorov - Smirnov (KS) normality test can also be used to check for normality:
+```{r Q2.a Normality test: statistical information}
+writeLines(paste('Skewness:', skewness(df_long.ez[["aov"]][["residuals"]])))
+writeLines(paste('Kurtosis: ', kurtosis(df_long.ez[["aov"]][["residuals"]])))
+ks.test(x = df_long.ez[["aov"]][["residuals"]],
+        y = "pnorm",
+        mean = mean(df_long.ez[["aov"]][["residuals"]]),
+        sd = sd(df_long.ez[["aov"]][["residuals"]]))
+```
+Both skewness and kurtosis are less than 1, indicating that it is possible that the distribution is normal. The KS test indicates that the null hypothesis cannot be rejected (D=0.05, p=0.99), and thus can be said that the data follows a normal distribution.
+
+Afterwards, the HoV must be checked:
+```{r Q2.a HoV test}
+df_long.ez[["Levene's Test for Homogeneity of Variance"]]
+```
+Levene's test indicate that the variance of the data is not unequal (F=1.85, P=0.15).
+
+With this, it can be concluded that a main effect on blood flow due to exercise conditions was found (F=2.822; P=0.047).
+
+## b. First, use t-tests with the Bonferroni correction method to assess main effects. 
+First, we need to calculate the mean and standard deviation of the samples:
+```{r Q2 mean and SD}
+df_long %>% 
+  group_by(Cond) %>% 
+  summarise(mean_bloodflow = mean(BloodFlow), SD_bloodflow=sd(BloodFlow))
+```
+
+Afterwards, post-hoc analysis will now be done using t-test with Bonferroni correction. Statistical significance will be interpreted at alpha = 0.05.
+```{r Q2.b Post-hoc: Bonferroni}
+pairwise.t.test(x = df_long$BloodFlow, #what you are measuring
+                g = df_long$Cond, #groups
+                paired = FALSE, #independent t tests
+                alternative = "two.sided", #hypothesis
+                p.adjust.method = "bonferroni") #or "holm"´
+```
+
+Post-hoc analysis revealed that the blood flow for weights was significantly larger than for bike (117.70±50.25 vs 96.17±36.04; P=0.01), for rest (117.70±50.25 vs 86.37±32.47; P<0.01) and for sprint (117.70±50.25 vs 94.97±40.33; P<0.01).
+
+## c. Second, use the Tukey’s HSD method to assess main effects. 
+Post-hoc analysis will now be done using Tukey's Honestly Significant Difference (HSD) test. Statistical significance will be interpreted at alpha = 0.05.
+```{r Q2.c Post-hoc: Tukey HSD}
+TukeyHSD(x = df_long.ez[["aov"]])
+```
+Post-hoc analysis revealed that the blood flow from doing weights was significantly larger than the one present during rest (117.70±50.25 vs 86.37±32.47; P=0.03).
+
+## d. Is there a discrepancy between the p-value results from the post-hoc t-tests and the results from the Tukey’s HSD? If so, why might this be?
+There is a discrepancy between both p-values of the post-hoc tests, which might be explained due to the fact that the Bonferroni approach uses adjusted p-values. These adjusted p-values take into account the repetition of the t-tests for its calculations, helping maintain a low level of error propagation through the course of the statistical tests. Due to this, it can be considered that the Bonferroni approach is more conservative than Tukey's when dealing with multiple t-tests.
+
+# Question 3
+For this question, check all assumptions, make the appropriate data transformations, run the analyses, summarize the main effects and posthocs in a publishable format, and make a publishable graph of the primary findings. [10 marks] 
+## a. Run a one-way ANOVA to examine whether flow changes over time.
+First, a one-way ANOVA for the blood flow difference through time must be calculated. Statistical significance will be interpreted at alpha = 0.05.
+```{r Q3.a ANOVA, warning = FALSE, message = FALSE}
+df_long.ez <- ezANOVA(data = df_long, #dataset
+                 dv = BloodFlow, #dependent variable you are comparing between
+                 wid = ID, #who are the individuals
+                 within = Time,
+                 type = 3, 
+                 return_aov = TRUE)
+df_long.ez[['ANOVA']]
+```
+
+Normality of the residuals and sphericity must be checked so as to be sure that these results can be interpreted as is. First the normality:
+```{r Q3.a Normality test: QQ Plot, fig.width=10, fig.height = 6}
+plot_base <-  ggplot(tibble(val = df_long.ez[["aov"]][["ID:Time"]][["residuals"]]), aes(sample = val))
+plotQQ <- plot_base + stat_qq(colour = "turquoise3") + stat_qq_line(colour = "turquoise4") + labs(y= "Sample Quantiles", x = "Theoretical Quantiles") + theme_light()
+
+plot_base <- ggplot(tibble(val = df_long.ez[["aov"]][["ID:Time"]][["residuals"]]), aes(x = val))
+plotHist <-  plot_base + geom_histogram(aes(y = ..density..), bins = 10, colour = "turquoise3", fill = "turquoise4", alpha = 0.5, position = "identity") +
+        geom_density(alpha=0.1, color = "turquoise4") + labs(y= "Density", x = "Residuals") + theme_light()
+
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 2. QQ-Plot (left) and Histogram (right) of the residuals from the ANOVA for Question 3", 
+           gp = gpar(fontsize=9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+plot_layout <- rbind(c(1,2), c(3,3))
+
+# Plot everything
+grid.arrange(plotQQ, plotHist, figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
+```
+
+Figure 2 indicates that the residuals appear to follow a normal distribution. Afterwards, skewness, kurtosis and the KS normality test can also be used to check for normality:
+```{r Q3.a Normality test: statistical information}
+writeLines(paste('Skewness:', skewness(df_long.ez[["aov"]][["ID:Time"]][["residuals"]])))
+writeLines(paste('Kurtosis: ', kurtosis(df_long.ez[["aov"]][["ID:Time"]][["residuals"]])))
+ks.test(x = df_long.ez[["aov"]][["ID:Time"]][["residuals"]],
+        y = "pnorm",
+        mean = mean(df_long.ez[["aov"]][["ID:Time"]][["residuals"]]),
+        sd = sd(df_long.ez[["aov"]][["ID:Time"]][["residuals"]]))
+```
+
+Both the skewness and kurtosis are lower than 1, which is what is expected for a normal distribution. The KS test indicates that the null hypothesis cannot be rejected (D=0.04, P=0.78), and thus can be concluded that the data does indeed follow a normal distribution.
+
+Afterwards, the sphericity must be checked:
+```{r Q3.a Sphericity test}
+df_long.ez[["Mauchly's Test for Sphericity"]]
+```
+
+Mauchly's Test indicates that the samples' sphericity assumption does not hold and thus the variances are not equal (W=0.66, P<0.01). It is possible to use the sphericity corrections created by the ezANOVA:
+
+```{r Q3.a Sphericity corrections}
+df_long.ez[["Sphericity Corrections"]]
+```
+
+With sphericity corrections the, (GGe = 0.85, P<0.01)
+
+Post-hoc analysis will now be done using a pairwise t-test with the Bonferroni corrections method. Statistical significance will be interpreted at alpha = 0.05.
+```{r Q3.a Post-hoc: Tukey HSD}
+pairwise.t.test(x = df_long$BloodFlow,
+                g = df_long$Time,
+                paired = TRUE,
+                alternative = "two.sided",
+                p.adjust.method = "bonferroni") #or "holm"
+```
+
+In order to correctly conclude, we need to obtain the mean and SD for the different variables:
+```{r Q3 mean and SD}
+df_long %>% 
+  group_by(Time) %>% 
+  summarise(mean_bloodflow = mean(BloodFlow), SD_bloodflow=sd(BloodFlow))
+```
+
+Figure 3 shows a box plot with the results, the * represents the time points with a significantly different value.
+```{r Q3.a Box Plot, fig.width = 10, fig.height = 6, message = FALSE}
+plot_base <- ggplot(dat = df_long, aes(x = Time, y = BloodFlow, fill = Time)) + labs(y = 'Blood Flow (ml/s)', x = 'Time', fill = "Time")
+
+
+
+plotBox <- plot_base + geom_boxplot() + theme_light() + geom_text(data = data.frame(Time = "T0", BloodFlow = 1.3 * max(df[["T0"]])), label = "*", size = 10)
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 3. Box Plot for the Blood Flow (in ml/s) for the different times after exercising. The stars indicate the values that were significantly different", 
+           gp = gpar(fontsize = 9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Plot everything
+grid.arrange(plotBox, figCaption, ncol = 1, heights = c(0.9, 0.1))
+```
+
+In conclusion, it can be said that there a main effect on the blood flow due to the passing of time after exercising (F=7.90, P<0.01). Post-hoc analysis revealed that the mean blood flow in T0 was significantly larger than in T30 (115.75±46.90 vs 90.81±41.60), T60 (115.75±46.90 vs 98.66±37.95), T90 (115.75±46.90 vs 90.98±36.60) and in T120 (115.75±46.90 vs 99.11±42.96).
+
+## b. From the results, recreate the classic ANOVA table we have used in lecture
+We can obtain all of the information needed to create the table from the "aov" element of the ezANOVA list:
+```{r Q3.b Review of ANOVA information from Q3.a}
+print(df_long.ez[["aov"]])
+```
+
+With this, the ANOVA table would look like:
+
+ANOVA Table
+Source           SS       df            MS         F           p
+Time (RM)     24311.02    4           6077.76     7.90       <0.01
+Random Error  178339.27   232         768.70
+
+# Question 4
+For this question, run the analyses, summarize the results and posthocs in a publishable format and make a publishable graph of the primary findings. [10 marks] 
+## a. Examine whether there is a difference between men and women for the timecourse of blood flow responses (i.e., after T0, T30, T60, T90, and T120) to Sprint exercise.
+The solution of this problem can be obtained using a factorial ANOVA for the sex as a between subject’s variable, and the time as a within subject’s variable. Statistical significance will be interpreted at alpha = 0.05.
+First, the data should be filtered as to only take into account the Sprint condition of the exercises
+```{r Q4.a DF Sprint filtering}
+df_long_Q4 <- df_long %>% 
+  filter(Cond == "Sprint")
+```
+
+```{r Q4.a Factorial ANOVA, warning = FALSE, message = FALSE}
+df_long_Q4.ez <- ezANOVA(data = df_long_Q4, #data file
+                   dv = BloodFlow, #Dependent variable
+                   wid = ID,
+                   between = Sex, #between variables
+                   within = Time, #within variables
+                   type = 2, #As instructed by Prof. Jason Au, due to the data being unbalanced
+                   return_aov = TRUE)
+```
+
+Before concluding, it is necessary to check the assumptions.
+First, the sphericity:
+
+```{r Q4.a Sphericity test}
+df_long_Q4.ez[["Mauchly's Test for Sphericity"]]
+```
+
+Mauchly's test indicate that the sphericity assumption is correct for both variables (W = 0.30, P = 0.19). 
+Moving on, the normality assumption must be checked:
+
+```{r Q4.a Normality test: QQ Plot, fig.width=10, fig.height = 6}
+plot_base <-  ggplot(tibble(val = df_long_Q4.ez[["aov"]][["ID:Time"]][["residuals"]]), aes(sample = val))
+plotQQ <- plot_base + stat_qq(colour = "turquoise3") + stat_qq_line(colour = "turquoise4") + labs(y= "Sample Quantiles", x = "Theoretical Quantiles") + theme_light()
+
+plot_base <- ggplot(tibble(val = df_long.ez[["aov"]][["ID:Time"]][["residuals"]]), aes(x = val))
+plotHist <-  plot_base + geom_histogram(aes(y = ..density..), bins = 10, colour = "turquoise3", fill = "turquoise4", alpha = 0.5, position = "identity") +
+        geom_density(alpha=0.1, color = "turquoise4") + labs(y= "Density", x = "Residuals") + theme_light()
+
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 4. QQ-Plot (left) and Histogram (right) of the residuals from the ANOVA for Question 4", 
+           gp = gpar(fontsize=9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+plot_layout <- rbind(c(1,2), c(3,3))
+
+# Plot everything
+grid.arrange(plotQQ, plotHist, figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
+```
+
+Figure 4 indicates that the residuals appear to follow a normal distribution. Afterwards, skewness, kurtosis and the KS normality test can also be used to check for normality:
+```{r Q4.a Normality test: statistical information}
+writeLines(paste('Skewness:', skewness(df_long_Q4.ez[["aov"]][["ID:Time"]][["residuals"]])))
+writeLines(paste('Kurtosis: ', kurtosis(df_long_Q4.ez[["aov"]][["ID:Time"]][["residuals"]])))
+ks.test(x = df_long_Q4.ez[["aov"]][["ID:Time"]][["residuals"]],
+        y = "pnorm",
+        mean = mean(df_long.ez[["aov"]][["ID:Time"]][["residuals"]]),
+        sd = sd(df_long.ez[["aov"]][["ID:Time"]][["residuals"]]))
+```
+
+Both the skewness and kurtosis are lower than 1, which is what is expected for a normal distribution. The KS test indicates that the null hypothesis cannot be rejected (D = 0.11, P = 0.49), and thus can be concluded that the data does indeed follow a normal distribution.
+
+After checking that the assumptions are correct, it is now possible to make a conclusion on the ANOVA results:
+```{r Q4.a ANOVA Results}
+df_long_Q4.ez[['ANOVA']]
+```
+
+Pairwise t-tests will be used to compare the male and female participants. Statistical significance will be interpreted at alpha = 0.05. The t-tests for male and female comparing the different times (i.e. pairwise t-test for male and pairwise t-test for female) will not be calculated as they are out of the scope for this question.
+```{r Q4.a Post-hoc: unpaired t-test}
+#Posthocs
+#T0
+writeLines("T0")
+df_long_Q4_PH <- df_long_Q4 %>% 
+  filter(Time == "T0")
+pairwise.t.test(x = df_long_Q4_PH$BloodFlow,
+                g = df_long_Q4_PH$Sex,
+                paired = FALSE,
+                alternative = "two.sided",
+                p.adjust.method = "bonferroni")
+writeLines("------------------------------------")
+#T30
+writeLines("T30")
+df_long_Q4_PH <- df_long_Q4 %>% 
+  filter(Time == "T30")
+pairwise.t.test(x = df_long_Q4_PH$BloodFlow,
+                g = df_long_Q4_PH$Sex,
+                paired = FALSE,
+                alternative = "two.sided",
+                p.adjust.method = "bonferroni")
+writeLines("------------------------------------")
+#T60
+writeLines("T60")
+df_long_Q4_PH <- df_long_Q4 %>% 
+  filter(Time == "T60")
+pairwise.t.test(x = df_long_Q4_PH$BloodFlow,
+                g = df_long_Q4_PH$Sex,
+                paired = FALSE,
+                alternative = "two.sided",
+                p.adjust.method = "bonferroni")
+writeLines("------------------------------------")
+#T90
+writeLines("T90")
+df_long_Q4_PH <- df_long_Q4 %>% 
+  filter(Time == "T90")
+pairwise.t.test(x = df_long_Q4_PH$BloodFlow,
+                g = df_long_Q4_PH$Sex,
+                paired = FALSE,
+                alternative = "two.sided",
+                p.adjust.method = "bonferroni")
+writeLines("------------------------------------")
+#T120
+writeLines("T120")
+df_long_Q4_PH <- df_long_Q4 %>% 
+  filter(Time == "T120")
+pairwise.t.test(x = df_long_Q4_PH$BloodFlow,
+                g = df_long_Q4_PH$Sex,
+                paired = FALSE,
+                alternative = "two.sided",
+                p.adjust.method = "bonferroni")
+```
+
+There is a significant difference in T0 and T60, so the mean and standard deviation of the results during this time would be beneficial. First for T0:
+```{r Q4.a Mean and SD for T0}
+df_long_Q4 %>% 
+  filter(Time == "T0") %>% 
+  group_by(Sex) %>% 
+  summarise(mean_bloodflow = mean(BloodFlow), SD_bloodflow=sd(BloodFlow))
+```
+
+It can be seen that blood flow was significantly greater in males than in females in T0 (131.17±53.27 vs 68.44±23.66, P=0.03).
+And now for T60:
+```{r Mean and SD for T60}
+df_long_Q4 %>% 
+  filter(Time == "T60") %>% 
+  group_by(Sex) %>% 
+  summarise(mean_bloodflow = mean(BloodFlow), SD_bloodflow=sd(BloodFlow))
+```
+It can be seen that blood flow was significantly greater in males than in females in T60 as well (119.05±34.55 vs 66.82±16.73, P<0.01).
+
+To conclude, it can be said that there is a main effect on the blood flow due to both the passing of time after exercising and the sex of the person (Time: F = 2.66, P = 0.04; Sex: F = 4.79, P=0.05; Sex:Time: F = 2.83, P=0.03). Post-hoc analysis revealed that the mean blood flow in T0 and T60 was significantly larger for males than for females ((131.17±53.27 vs 68.44±23.66; P=0.03), and (119.05±34.55 vs 66.82±16.73; P<0.01), respectively).
+
+Figure 5 shows the results of this analysis, indicating with a * the values that were significantly different.
+```{r Q4.a Results Plot, fig.width = 10, fig.height = 6}
+plot_base <- ggplot(dat = df_long_Q4, aes(x = Time, y = BloodFlow, fill = Sex)) + labs(y = 'Blood Flow (ml/s)', x = 'Time', fill = "Sex")
+
+
+
+plotBox <- plot_base +
+  geom_boxplot() +
+  theme_light() +
+  geom_text(data = data.frame(Time = "T0", Sex="M", BloodFlow = 1.05 * max(df_long_Q4[df_long_Q4[["Time"]]=="T0",][["BloodFlow"]])), label = "*", size = 10) +
+  geom_text(data = data.frame(Time = "T60", Sex="M", BloodFlow = 1.05 * max(df_long_Q4[df_long_Q4[["Time"]]=="T0",][["BloodFlow"]])), label = "*", size = 10)
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 5. Box Plot for the Blood Flow (in ml/s) for both sexes and for the different time after exercising. The stars indicate the values that were significantly different", 
+           gp = gpar(fontsize = 9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Plot everything
+grid.arrange(plotBox, figCaption, ncol = 1, heights = c(0.9, 0.1))
+```
+
+## b. From the results, recreate the classic ANOVA table we have used in lecture.
+To obtain the ANOVA table, we can use the results obtained in Q4.a for the F value and the p value:
+```{r Q4.b ANOVA Results Review from Q4.a}
+df_long_Q4.ez[['ANOVA']]
+```
+
+And for the information related to the sum of squares and degrees of freedom:
+```{r Q4.b Review of ANOVA information from Q4.a}
+print(df_long_Q4.ez[["aov"]])
+```
+In order to create the complete ANOVA table:
+
+ANOVA Table
+Source            SS         df         MS         F         p
+Time (RM)         7386.30     4         1846.58    2.66     0.04
+Sex (Between)     18163.49    1         18163.49   4.79     0.05
+Sex x Time        7849.29     4         1962.32    2.83     0.03
+Random Error      33291.68    48        693.58
+Subject Error     45520.87    12        3793.41
