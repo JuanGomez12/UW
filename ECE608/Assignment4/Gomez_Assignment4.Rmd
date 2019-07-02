@@ -1,0 +1,125 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+ECE 608 (Spring 2019) Assignment 4.
+Professor: Jason Au
+Student: Juan Manuel Gomez Gonzalez
+
+
+Information: 
+Power and Sample Size Calculations 
+
+First, the required libraries need to be loaded:
+```{r Libraries load}
+library(tidyverse)
+library(grid)
+library(gridExtra)
+library(pwr)
+library(pwr2)
+```
+
+You have been asked by the ECE department to conduct a trial within the University of Waterloo to evaluate the benefit of active learning vs traditional lecturing for undergraduate students in STEM (science, technology, engineering, and math). Fortunately, you have found an excellent meta-analysis that can help guide your investigation. Using the results from Freeman et al. (2014) PNAS, answer the following questions to help design your university-wide study. (HINT: PNAS is a very high profile journal; you may need to look at the Supplemental Tables to answer the questions). 
+ 
+# 1. Summarize the findings of the meta-analysis using the following prompts: [5 marks] 
+
+## a. What is the purpose of the study? 
+The purpose of the study is to review both published and unpublished literature, in order to find if the process of active learning helps students achieve higher learning scores in STEM related undergraduate degrees, compared with traditional learning. They mainly analyzed scores in identical or equivalent testing schemes and failure rates (D or F marks) in the analyzed courses.
+
+## b. Qualitatively describe Figure 2A.
+Fig 2.A. shows a Forest Plot for the effect sizes divided by each discipline. It basically shows the effect size of the comparison between active learning and traditional lecturing in 8 the STEM fields analyzed.
+
+## c. What is the primary finding of the study? 
+One of the primary findings is that when talking about examination results or equivalent measurements, there is a statistically significant increase in performance (with a weighted standardized mean difference of approximately 0.5 deviations, SD (Z = 9.781, P << 0.001)) when using active learning in comparison with only traditional learning. The other primary finding is that there is an odds ratio of 1.95 (Z = 10.4, P << 0.001) for the overall mean effect size. The researchers mention that this 1.95 odds ratio is equivalent to a risk ratio of 1.5, where there is a 1.5 times bigger risk of failing a course when using traditional lecturing compared with active learning.
+
+## d. Do a little research of your own and describe how Hedges’s g differs from Cohen’s d. Why might have the researchers used Hedges’s g in their study? 
+The main difference seems to come from the way each statistic calculates the pooled standard deviation. Cohen's uses the pooled standard deviation for the dividend of the formula, while Hedge's uses the weighted standard deviation [1].
+
+
+This makes the Hedge's preferable, as it has been found that it has better propertieswhen the sample sizes are significantly different or when dealing with smaller sample sizes [2], specifically less than 20 [1]. Nonetheless, their performance is similar when dealing with large samples where both sample sizes are similar [2].
+
+According to this, it seems that the choice for using Hedge's instead of Cohen's is mainly due to the size of some of the samples of the papers, where they are found to be as small as n=16.
+
+# 2. The university is currently revising its budget and would like you to submit a few different study designs for your investigation. How many participants should you recruit for the following research questions? Assume that students do not experience both active learning styles and traditional styles (i.e., not a cross-over design). List both the anticipated effect size and estimated total sample size in your answer. (For this question, assume that Hedges’s g == Cohen’s d) [6 marks]
+
+## a) Using the suggested overall effect size reported across the 8 STEM disciplines, what is the sample size needed to find effects for a comparison between active and traditional lecturing styles.
+Using the overall effect size found in the research paper of 0.47 SD, and assuming a significance level of 0.01 and a power of 0.8, it is possible to calculate the number of samples needed to obtain the same effect present on the paper:
+
+```{r Q2.a Sample size calculation}
+pwr.t.test(d = 0.47, #effect size
+           n = NULL, #Sample size
+           sig.level = 0.01, #alpha
+           power = 0.8, #power
+           type = "two.sample") #Specific for 2 sample  t-test
+```
+
+A minimum of 108 samples are needed to obtain an effect size of 0.47SD when the significance level is 0.01 and the power is 0.8.
+
+## b) What is the sample size needed to find effects for a study design comparing active learning vs traditional lecturing between each of the 8 STEM disciplines, assuming an effect size of f=0.5 for learning style, and an effect size of f=0.2 for STEM discipline?
+Assuming a significance level of 0.01 and a power 0f 0.8, ss.2way function can be used to calculate the needed sample sizes when the expected f-score is 0.5 for learning style and 0.2 for STEM discipline:
+
+```{r Q2.b Sample size calculation for 2way ANOVA}
+ss.2way(a = 2, #learning style
+        b = 8, #STEM disciplines
+        alpha = 0.01, #significance level
+        beta = 0.20, #beta = (1 - power)
+        f.A = 0.5, #f score for a
+        f.B = 0.2, #f score for b
+        B=1000) #iteration times
+```
+32 samples are needed per group, for a total minimum of 512 samples for obtaining an f value of 0.5 for learning style and 0.2 for STEM discipline guaranteeing the significance and power levels previously selected.
+
+## c) Using the grid.arrange fuction, create 3 side-by-side plots to show the sample size vs power curve for Engineering, Biology, and Mathematics disciplines. What sample size looks like an appropriate fit for all disciplines?
+
+```{r Q2.a Normality test: QQ Plot, fig.width=10, fig.height = 6}
+n <- seq(5,200,by=1)
+lenn <- length(n)
+d <- c(0.3,0.5,0.8)
+lend <- length(d)
+
+pwrtable <- array(numeric(lenn*lend), dim = c(lenn,lend))
+for (i in 1:lend){
+  for (j in 1:lenn){
+    result <- pwr.t.test(d = d[i],
+                         n = n[j],
+                         sig.level = 0.01,
+                         type = "two.sample",
+                         alternative = "two.sided")
+    pwrtable[j,i] <- result$power
+  }
+}
+pwrtable <- data.frame(pwrtable, n)
+names(pwrtable) <- c("plow","pmid","phigh","samplesize")
+pwrtable <- gather(data = pwrtable, key = pwrlevel, value = power,1:3)
+pwrtable$pwrlevel <- factor(pwrtable$pwrlevel, levels = c("plow","pmid","phigh"))
+ggplot(data = pwrtable, aes(x = samplesize, y = power))+
+  geom_line(aes(group = pwrlevel, color = pwrlevel))+
+  geom_hline(yintercept = 0.80)
+
+plot_base <-  ggplot(tibble(val = df_long.ez[["aov"]][["residuals"]]), aes(sample = val))
+plotQQ <- plot_base + stat_qq(colour = "turquoise3") + stat_qq_line(colour = "turquoise4") + labs(y= "Sample Quantiles", x = "Theoretical Quantiles") + theme_light()
+
+plot_base <- ggplot(tibble(val = df_long.ez[["aov"]][["residuals"]]), aes(x = val))
+plotHist <-  plot_base + geom_histogram(aes(y = ..density..), bins = 10, colour = "turquoise3", fill = "turquoise4", alpha = 0.5, position = "identity") +
+        geom_density(alpha=0.1, color = "turquoise4") + labs(y= "Density", x = "Residuals") + theme_light()
+
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 1. QQ-Plot (left) and Histogram (right) of the residuals from the ANOVA for Question 2", 
+           gp = gpar(fontsize=9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+plot_layout <- rbind(c(1,2,3), c(4,4,4))
+
+# Plot everything
+grid.arrange(eng_plot, bio_plot, math_plot, figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
+```
+ 
+# 3. Using the first study design (2a), write up a full sample size calculation statement that you would submit for a grant application. Be sure to include all pertinent information that goes into your decision making, as discussed in class. [3 marks] 
+
+
+
+# References
+[1] 	Statistics How To, "Hedges'g: Definition, Formula," Statistics How To, 2019. [Online]. Available: https://www.statisticshowto.datasciencecentral.com/hedges-g/. [Accessed 1 July 2019].
+[2] 	National Institute of Standards and Technology - NIST, "Hedge's g Statistic," National Institute of Standards and Technology, 15 August 2018. [Online]. Available: https://www.itl.nist.gov/div898/software/dataplot/refman2/auxillar/hedgeg.htm. [Accessed 1 July 2019].
