@@ -46,14 +46,16 @@ According to this, it seems that the choice for using Hedge's instead of Cohen's
 Using the overall effect size found in the research paper of 0.47 SD, and assuming a significance level of 0.01 and a power of 0.8, it is possible to calculate the number of samples needed to obtain the same effect present on the paper:
 
 ```{r Q2.a Sample size calculation}
-pwr.t.test(d = 0.47, #effect size
+result <- pwr.t.test(d = 0.47, #effect size
            n = NULL, #Sample size
            sig.level = 0.01, #alpha
            power = 0.8, #power
            type = "two.sample") #Specific for 2 sample  t-test
+print(result)
+writeLines(paste("Total sample size is", 2 * ceiling(result[["n"]])))
 ```
 
-A minimum of 108 samples are needed to obtain an effect size of 0.47SD when the significance level is 0.01 and the power is 0.8.
+A minimum of 108 samples are needed per group, for a total of 216, to obtain an effect size of 0.47 SD when the significance level is 0.01 and the power is 0.8.
 
 ## b) What is the sample size needed to find effects for a study design comparing active learning vs traditional lecturing between each of the 8 STEM disciplines, assuming an effect size of f=0.5 for learning style, and an effect size of f=0.2 for STEM discipline?
 Assuming a significance level of 0.01 and a power 0f 0.8, ss.2way function can be used to calculate the needed sample sizes when the expected f-score is 0.5 for learning style and 0.2 for STEM discipline:
@@ -71,10 +73,14 @@ ss.2way(a = 2, #learning style
 
 ## c) Using the grid.arrange fuction, create 3 side-by-side plots to show the sample size vs power curve for Engineering, Biology, and Mathematics disciplines. What sample size looks like an appropriate fit for all disciplines?
 
-```{r Q2.a Normality test: QQ Plot, fig.width=10, fig.height = 6}
-n <- seq(5,200,by=1)
+```{r Q2.a Normality test: QQ Plot pt2, fig.width=10, fig.height = 6}
+# Biology = 0.303
+# Engineering = 0.481
+# Math = 0.340
+
+n <- seq(5,300,by=1)
 lenn <- length(n)
-d <- c(0.3,0.5,0.8)
+d <- c(0.303, 0.481, 0.340)
 lend <- length(d)
 
 pwrtable <- array(numeric(lenn*lend), dim = c(lenn,lend))
@@ -88,24 +94,43 @@ for (i in 1:lend){
     pwrtable[j,i] <- result$power
   }
 }
-pwrtable <- data.frame(pwrtable, n)
-names(pwrtable) <- c("plow","pmid","phigh","samplesize")
-pwrtable <- gather(data = pwrtable, key = pwrlevel, value = power,1:3)
-pwrtable$pwrlevel <- factor(pwrtable$pwrlevel, levels = c("plow","pmid","phigh"))
-ggplot(data = pwrtable, aes(x = samplesize, y = power))+
-  geom_line(aes(group = pwrlevel, color = pwrlevel))+
-  geom_hline(yintercept = 0.80)
 
-plot_base <-  ggplot(tibble(val = df_long.ez[["aov"]][["residuals"]]), aes(sample = val))
-plotQQ <- plot_base + stat_qq(colour = "turquoise3") + stat_qq_line(colour = "turquoise4") + labs(y= "Sample Quantiles", x = "Theoretical Quantiles") + theme_light()
+pwrtable <- data.frame(n, pwrtable)
+names(pwrtable) <- c("samplesize","power_Bio","power_Eng","power_Math")
 
-plot_base <- ggplot(tibble(val = df_long.ez[["aov"]][["residuals"]]), aes(x = val))
-plotHist <-  plot_base + geom_histogram(aes(y = ..density..), bins = 10, colour = "turquoise3", fill = "turquoise4", alpha = 0.5, position = "identity") +
-        geom_density(alpha=0.1, color = "turquoise4") + labs(y= "Density", x = "Residuals") + theme_light()
+#Create the Biology plot
+bio_plot <- ggplot(data = pwrtable, aes(x = samplesize, y = power_Bio)) +
+  labs(y = 'Power (Biology)', x = 'Sample Size') +
+  theme_light() +
+  geom_line(color="forestgreen", aes(color = "Biology")) +
+  geom_hline(yintercept = 0.80) +
+  geom_point(data = data.frame(samplesize = pwrtable[match(TRUE, pwrtable[["power_Bio"]]>0.8),"samplesize"], power_Bio = 0.8)) +
+  geom_text(data = data.frame(samplesize = 0.85 * pwrtable[match(TRUE, pwrtable[["power_Bio"]]>0.8),"samplesize"], power_Bio = 0.82),
+                              label = paste("n =", pwrtable[match(TRUE, pwrtable[["power_Bio"]]>0.8),"samplesize"]), size = 4)
+
+#Create the Biology plot
+eng_plot <- ggplot(data = pwrtable, aes(x = samplesize, y = power_Eng)) +
+  labs(y = 'Power (Engineering)', x = 'Sample Size') +
+  theme_light() +
+  geom_line(color="Purple", aes(color = "Engineering")) +
+  geom_hline(yintercept = 0.80) +
+  geom_point(data = data.frame(samplesize = pwrtable[match(TRUE, pwrtable[["power_Eng"]]>0.8),"samplesize"], power_Eng = 0.8)) +
+  geom_text(data = data.frame(samplesize = 0.85 * pwrtable[match(TRUE, pwrtable[["power_Eng"]]>0.8),"samplesize"], power_Eng = 0.82),
+                              label = paste("n =", pwrtable[match(TRUE, pwrtable[["power_Eng"]]>0.8),"samplesize"]), size = 4)
+
+#Create the Biology plot
+math_plot <- ggplot(data = pwrtable, aes(x = samplesize, y = power_Math)) +
+  labs(y = 'Power (Math)', x = 'Sample Size') +
+  theme_light() +
+  geom_line(color="gold", aes(color = "Math")) +
+  geom_hline(yintercept = 0.80) +
+  geom_point(data = data.frame(samplesize = pwrtable[match(TRUE, pwrtable[["power_Math"]]>0.8),"samplesize"], power_Math = 0.8)) +
+  geom_text(data = data.frame(samplesize = 0.85 * pwrtable[match(TRUE, pwrtable[["power_Math"]]>0.8),"samplesize"], power_Math = 0.82),
+                              label = paste("n =", pwrtable[match(TRUE, pwrtable[["power_Math"]]>0.8),"samplesize"]), size = 4)
 
 
 # Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
-figCaption <- textGrob("Figure 1. QQ-Plot (left) and Histogram (right) of the residuals from the ANOVA for Question 2", 
+figCaption <- textGrob("Figure 1. Power vs Sample Size plots for the departments of Biology (left), Engineering (middle), and Math (right)", 
            gp = gpar(fontsize=9, col = "#2b2b2b"), 
            x = unit(0.005, "npc"), just = c("left", "bottom"))
 
@@ -113,7 +138,7 @@ figCaption <- textGrob("Figure 1. QQ-Plot (left) and Histogram (right) of the re
 plot_layout <- rbind(c(1,2,3), c(4,4,4))
 
 # Plot everything
-grid.arrange(eng_plot, bio_plot, math_plot, figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
+grid.arrange(bio_plot, eng_plot, math_plot, figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
 ```
  
 # 3. Using the first study design (2a), write up a full sample size calculation statement that you would submit for a grant application. Be sure to include all pertinent information that goes into your decision making, as discussed in class. [3 marks] 
