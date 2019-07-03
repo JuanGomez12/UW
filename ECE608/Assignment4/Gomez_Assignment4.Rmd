@@ -108,7 +108,7 @@ bio_plot <- ggplot(data = pwrtable, aes(x = samplesize, y = power_Bio)) +
   geom_text(data = data.frame(samplesize = 0.85 * pwrtable[match(TRUE, pwrtable[["power_Bio"]]>0.8),"samplesize"], power_Bio = 0.82),
                               label = paste("n =", pwrtable[match(TRUE, pwrtable[["power_Bio"]]>0.8),"samplesize"]), size = 4)
 
-#Create the Biology plot
+#Create the Engineering plot
 eng_plot <- ggplot(data = pwrtable, aes(x = samplesize, y = power_Eng)) +
   labs(y = 'Power (Engineering)', x = 'Sample Size') +
   theme_light() +
@@ -118,7 +118,7 @@ eng_plot <- ggplot(data = pwrtable, aes(x = samplesize, y = power_Eng)) +
   geom_text(data = data.frame(samplesize = 0.85 * pwrtable[match(TRUE, pwrtable[["power_Eng"]]>0.8),"samplesize"], power_Eng = 0.82),
                               label = paste("n =", pwrtable[match(TRUE, pwrtable[["power_Eng"]]>0.8),"samplesize"]), size = 4)
 
-#Create the Biology plot
+#Create the Math plot
 math_plot <- ggplot(data = pwrtable, aes(x = samplesize, y = power_Math)) +
   labs(y = 'Power (Math)', x = 'Sample Size') +
   theme_light() +
