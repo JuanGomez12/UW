@@ -1,0 +1,12 @@
+---
+title: "Assignment 4"
+output: html_notebook
+---
+
+ECE 608 (Spring 2019) Assignment 5
+Professor: Jason Au
+Student: Juan Manuel Gomez Gonzalez
+
+
+Information: 
+Regression
