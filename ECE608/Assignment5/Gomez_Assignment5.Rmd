@@ -27,38 +27,58 @@ library(olsrr)
 ```
 
 
-# 1. For the following research questions, identify the correct regression you would need to use (and subtype of linear regression, if applicable) and identify the independent and dependent variables, as well as whether they are continuous or categorical values: (4 marks) 
-## a. Joseph would like to know what demographic factors (i.e., sex, age, race) are related to colorectal tumor diameter in cancer patients.
-The regression would be a linear regression, specifically a Statistical Multiple regression. The dependent variable would be the tumor diameter (continous), while the independent variables would be the demographic factors that will be tested for the relation. In this case, sex and race would be categorical while ahe would be a continuous variable.
+# Question 1.
+## a.
+The regression would be a linear regression, specifically a Statistical Multiple regression. The dependent variable would be the tumor diameter (continuous), while the independent variables would be the demographic factors that will be tested for the relation. In this case, sex and race would be categorical while age would be a continuous variable.
 
-## b) Priya is interested in determining whether the number of drivers pulled over for speeding is impacted by the day of the week in Ontario.
-The appropriate regression for this scenario would be a Poisson Regression. The number of drivers pulled over for speeding would be the (numerical, non-nontinous) dependent variable, and the  day of the week would be the (categorical) independent variable.
+## b.
+The appropriate regression for this scenario would be a Poisson Regression. The number of drivers pulled over for speeding would be the continuous dependent variable, and the day of the week would be the (categorical) independent variable.
 
-## c) Josie would like to investigate whether consideration of sleep duration improves the prediction of academic grades above and beyond the duration of studying hours.
-The regression depicted in this scenario would be a linear regression, specifically a hierarchical multiple regression. The independent variables would be the sleep duration and the studying hours, both being continous variables. The dependent variable would be the academic grades, and depending on the system can be a continuous (if is from 0 to 100%) or categorical (from F to A+).
+## c.
+The regression depicted in this scenario would be a linear regression, specifically a hierarchical multiple regression. The independent variables would be the sleep duration and the studying hours, both being continuous variables. The dependent variable would be the academic grades, and depending on the system needs to be continuous (e.g. from 0 to 100%) as a categorical output is not allowed when doing a linear regression.
 
-## d) Kevin would like to be able to predict whether older adults will snore or not based on their age group (50s, 60s or 70s), gender, and type of pillow (soft or hard).
-Logistical Regression
-
-
+## d.
+In this scenario, the regression that will be used is a Logistical Regression. The independent variable would be the snoring condition (i.e. snoring or no snoring during sleep), which is categorical, and the dependent variables would be the age groups (categorical), the gender (also categorical) and the pillow type (categorical as well).
 
 
-# 3. For the following research question, run the appropriate linear regression model. Report whether the model meets ALL assumptions of linear regression. (7 marks)
-Using the dataset airquality from library(datasets), investigate which of Solar.R, Wind and Temp are the best predictors of Ozone quality. 
- 
-More information about the dataset: Ozone recordings were taken on different days, along with the amount of solar radiation, wind speed, and air temperature (measured in degrees Fahrenheit).
+# Question 2
+## a.
+The estimate of the intercept indicates what is the condition on the intercept, or when all of the different variables are zero. In our case, when the variables are "zero" is when the first level of each variable is used (i.e. the base variables), so it tells us what is the count of people that have esophageal cancer when the age group is "_A30" and the alcohol consumption is "Occasional". In this case, the count of patients with those conditions is exp(-0.09), is predicted to be:
 
-```{r}
+```{r Q2.a exponential calculation}
+exp(-0.09)
+```
+## b.
+The significant p-values indicate which attributes have an effect on the development of esophageal cancer.
+
+## c.
+People who occasionally drink and are in the 60's group age are predicted to be
+```{r Q2.c exponential calculation}
+exp(1.85)
+```
+6.36 times more likely to develop esophageal cancer than people who occasionally drink and are in their 30's.
+
+## d.
+It indicates that the first model, which includes the alcohol consumption, is more robust or "fits better" to the data that is being used to create the models.
+
+# Question 3
+First it is necessary to load the dataset:
+
+```{r Q3 dataset load}
 df <- airquality
 df
 ```
 
-```{r DataFrame preprocessing}
+It can be seen that the data has missing information. This might affect the creation of the model, so the best course is to first handle them. In this case, the data will be omitted (dropped):
+
+```{r Q3 DataFrame preprocessing}
 df <- na.omit(df)
 df
 ```
 
-```{r}
+Now, a model must be created in order to check which variables can be dropped.
+
+```{r Q3 Model creation}
 mod <- lm(Ozone ~ Solar.R + Wind + Temp, data = df)
 writeLines("---------------- Model Summary ----------------")
 summary(mod)
@@ -66,23 +86,91 @@ writeLines("---------------- Standardized betas ----------------")
 QuantPsyc::lm.beta(mod)
 ```
 
-```{r}
+Using the ols_step_both_p method, the different variables will be evaluated to see which fits best for the regression:
+
+```{r Q3 stepwise model evaluation}
 both <- ols_step_both_p(mod, pent = 0.3, prem = 0.5, details = TRUE) #pent 0.3, prem 0.3
+```
+
+All of the variables have what appears to be valuable information for the construction of the regression model.
+
+Plotting the steps:
+```{r Q3 stepwise model plot}
 plot(both)
 ```
 
+Again, it can be seen that the addition of the Temperature, Wind Speed and Solar Radiation offer valuable insight for the model creation.
 
-```{r}
-#Hierarchical Multiple Regression (Blockwise)
-hmod0 <- lm(Ozone ~ 1, data = df)
-hmod1 <- lm(Ozone ~ Solar.R, data = df)
-hmod2 <- lm(Ozone ~ Solar.R + Wind, data = df)
-hmod3 <- lm(Ozone ~ Solar.R + Wind + Temp, data = df)
-
-stats::anova(hmod0,hmod1,hmod2,hmod3)
-
-summary(hmod3)
+Nonetheless, to guarantee these results, it is necessary to test the assumptions.
+## Assumption 1: Are the variables continuous?
+First, the continuity of the variables
+```{r Q3 Assumption 1}
+df <- dplyr::select(df, Ozone:Temp) #Remove the variables we are not interest in, like month and day
+df
 ```
- 
+They all seem to be continous, so the first assumption holds.
 
- 
+## Assumption 2: Are dependent y values independent from each other?
+The air quality dataset is based on the measurements made from May 1, 1973 to September 30 of 1973. This means that all of the measurements were made on the same place but on different days. Due to this, it can be considered that the readings made are Repeated Measures, and thus they are not independent from each other. This last point breaks the second assumption, making the previously created model not usable due to not holding all of the assumptions. Nonetheless, the rest of the assumptions will be checked.
+
+## Assumption 3: Non-zero variance of predictors
+```{r Q3 Assumption 3}
+options(scipen = 9999)
+apply(df, 2, var)
+```
+None of the predictors have a variance of zero, making the third assumption valid.
+
+## Assumption 4: The regression model is linear in predictors
+```{r Q3 Assumption 4}
+Hmisc::rcorr(as.matrix(df), type = "pearson")
+```
+The different predictors seem to behave linearly, for the exception of Solar Radiance, which presents a linear correlation albeit at a loweer degree. It seems like the fourth assumption holds.
+
+## Assumption 5: No perfect multicollinearity
+```{r Q3 Assumption 5}
+car::vif(mod) #Only works for multiple variables
+```
+It seems like the data is not multicollinear, and thus the assumption holds.
+
+## Assumption 6, 7 and 8: Cook's Distance, Homoscedasticity and Normality of residuals
+```{r Q3 Assumption 6 7 and 8, fig.width=10, fig.height = 6}
+#Assumption 6: Highly influential points (Cook's distance)
+#Assumption 7: Homoscedasticity
+#Assumption 8: Normality of residuals
+par(mfrow = c(2,2))  #Set plotting window to a 2x2 orientation
+plot(mod)           #Plot all regression plots
+par(mfrow = c(1,1))  #Set plotting window back to single
+# Plot1: Homoescedasticity. Are the residuals equal at every level?
+# Plot2: Normality of residuals
+# Plot3: Standardized homoscedasticity
+# Plot4: Cook's distance
+```
+It seems that besides some outliers, the majority of the data holds for the previous assumptions.
+
+## Assumption 9: Independence of residuals
+```{r Q3 Assumption 9 plot}
+stats::acf(mod$residuals)         #Plot for lag function: Is there a pattern in the lag? Is it predictable?
+```
+```{r Q3 Assumption 9 tests}
+lawstat::runs.test(mod$residuals) #Runs test: Do the residuals differ from a straight line?
+lmtest::dwtest(mod)               #Durbin-Watson Test: Is there first order autocorrelation? 1.5-2.5 = normal.
+```
+There does not seem to be a pattern. Also, the Runs (value=-0.67, p=0.51) and the Durbin-Watson (DW=1.94, p=0.33) tests are in order. Thus, the assumption holds.
+
+## Assumption 10: The mean of residuals is zero
+```{r Q3 Assumption 10}
+mean(mod$residuals)
+```
+The mean of the residuals is basically zero, so the assumption is correct.
+
+## Assumption 11: X variables and residuals are uncorrelated
+```{r Q3 Assumption 11}
+df.res <- data.frame(df, mod$residuals)
+Hmisc::rcorr(as.matrix(df.res), type = "pearson")
+```
+The x variables and the residuals are not correlated, so the assumption is not broken. 
+
+##Assumption 12: The number of observations must be greater than the number of Xs
+A minimum of 50+8*3=74 observations are needed, and the dataframe has 111, so the assumption holds.
+
+To summarize, all of the assumptions hold except the second assumption. Due to this, the built model cannot be used as not all of the assumptions are correct.
