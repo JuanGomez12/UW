@@ -1,0 +1,57 @@
+---
+title: "Assignment 6"
+output: html_notebook
+---
+
+ECE 608 (Spring 2019) Assignment 6
+Professor: Jason Au
+Student: Juan Manuel Gomez Gonzalez
+
+
+Information: 
+Reliability and Validity
+
+
+First, the required libraries need to be loaded:
+```{r Libraries load, results='hide'}
+library(tidyverse)
+library(psych)
+library(BlandAltmanLeh)
+```
+
+# Question 1
+Gus T. Wind is checking the reliability of the machine itself, and will only use this machine for his tests. This makes the model of the reliability test a Two-Way Mixed as it is an Test-Retest reliability test. Additionaly, the idea of the test is to obtain the true values of the oxygen and CO2 concentrations, therefore the test is of the absolute agreement type.
+Finally, Gus T. Wind intents on only using a signle measurement for the machine, so it is a single measures instead of an average measures test.
+The test can thus be classified as an ICC(3, 1) Absolute Agreement, Single Measures.
+The reliability score can then be calculated using the data find in the dataframe, which must be loaded first.
+```{r DataFrame load}
+df <- data.table::fread("A6_Reliability.csv")
+```
+
+Afterwards, the ICC function can be employed to obtain the different parameters. The value of interest ins then the ICC3 type found in the return of this function.
+```{r Q1 ICC}
+ICC_1 <- psych::ICC(df %>% select(Gas1, Gas2, Gas3, Gas4, Gas5, Gas6))
+ICC_1[["results"]] %>% 
+  tibble::rownames_to_column() %>% 
+  dplyr::filter(str_detect(rowname, 'Single_fixed_raters'))
+```
+
+The ICC for the gas analyzer is 0.76.
+
+# Question 2
+Cy Kyle Fast and company are trying to look at inter-rater reliability, with the condition that they want to make it as generalizable as possible. This means that for this case, it is necessary to use a Two-Way Random model. They are trying to measure the con
+
+1
+
+ 231`212121
+ 
+   sistency of the measurements, and so they should use the consistency type. Finally, they mention that 
+Due to the previous statements, the test can be classified as an ICC(2, 6) 
+
+```{r Q2 ICC}
+ICC_1 <- psych::ICC(df %>% select(Tired1, Tired2, Tired3, Tired4, Tired5, Tired6))
+ICC_1[["results"]] %>% tibble::rownames_to_column() %>% dplyr::filter(str_detect(rowname, 'Single_fixed_raters'))
+```
+
+# Question 3
+Juan R. Em wants to check his own reliability, meaning that we're looking at intra-rater reliability. This means that we are to use a two-way mixed test.
