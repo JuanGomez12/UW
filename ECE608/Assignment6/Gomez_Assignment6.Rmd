@@ -17,18 +17,22 @@ First, the required libraries need to be loaded:
 library(tidyverse)
 library(psych)
 library(BlandAltmanLeh)
+library(grid) #For the Q4c graph
+library(gridExtra) #For the Q4c graph
 ```
 
 # Question 1
-Gus T. Wind is checking the reliability of the machine itself, and will only use this machine for his tests. This makes the model of the reliability test a Two-Way Mixed as it is an Test-Retest reliability test. Additionaly, the idea of the test is to obtain the true values of the oxygen and CO2 concentrations, therefore the test is of the absolute agreement type.
-Finally, Gus T. Wind intents on only using a signle measurement for the machine, so it is a single measures instead of an average measures test.
-The test can thus be classified as an ICC(3, 1) Absolute Agreement, Single Measures.
+Gus T. Wind is checking the reliability of the machine itself, and will only use this machine for his tests. This makes the model of the reliability test a Two-Way Mixed as it is an Test-Retest reliability test. Additionally, the idea of the test is to obtain the true values of the oxygen and CO2 concentrations, therefore the test is of the absolute agreement type.
+Finally, Gus T. Wind intends on only using a single measurement for the machine, so it is a single measures instead of an average measures test.
+
+The test can thus be classified as an ICC(3, 1) Absolute Agreement.
+
 The reliability score can then be calculated using the data find in the dataframe, which must be loaded first.
 ```{r DataFrame load}
 df <- data.table::fread("A6_Reliability.csv")
 ```
 
-Afterwards, the ICC function can be employed to obtain the different parameters. The value of interest ins then the ICC3 type found in the return of this function.
+Afterwards, the ICC function can be employed to obtain the different parameters. The value of interest is then the ICC3 type found in the return of this function.
 ```{r Q1 ICC}
 ICC_1 <- psych::ICC(df %>% select(Gas1, Gas2, Gas3, Gas4, Gas5, Gas6))
 ICC_1[["results"]] %>% 
@@ -39,19 +43,73 @@ ICC_1[["results"]] %>%
 The ICC for the gas analyzer is 0.76.
 
 # Question 2
-Cy Kyle Fast and company are trying to look at inter-rater reliability, with the condition that they want to make it as generalizable as possible. This means that for this case, it is necessary to use a Two-Way Random model. They are trying to measure the con
+Cy Kyle Fast and company are trying to look at inter-rater reliability, with the condition that they want to make it as generalizable as possible. This means that for this case, it is necessary to use a Two-Way Random model. Additionally, they are interested in the true value of the measurement instead on the consistency of the raters, meaning the absolute agreement type must be used. Finally, the idea is to find if the experiment can lead to a person being reliable, so a single measures test should be used.
 
-1
-
- 231`212121
- 
-   sistency of the measurements, and so they should use the consistency type. Finally, they mention that 
-Due to the previous statements, the test can be classified as an ICC(2, 6) 
+Due to the previous statements, the test can be classified as an ICC(2, 1) Absolute Agreement.
+Using the previously gathered information, the value of interest would then be the ICC2k of the ICC function:
 
 ```{r Q2 ICC}
 ICC_1 <- psych::ICC(df %>% select(Tired1, Tired2, Tired3, Tired4, Tired5, Tired6))
-ICC_1[["results"]] %>% tibble::rownames_to_column() %>% dplyr::filter(str_detect(rowname, 'Single_fixed_raters'))
+ICC_1[["results"]] %>% tibble::rownames_to_column() %>% dplyr::filter(str_detect(rowname, 'Single_random_raters'))
 ```
 
+The ICC for this experiment would be 0.77.
+
 # Question 3
-Juan R. Em wants to check his own reliability, meaning that we're looking at intra-rater reliability. This means that we are to use a two-way mixed test.
+Juan R. Em wants to check his own reliability, meaning that we're looking at intra-rater reliability. This means that we are to use a two-way mixed test. Additionally, he is looking to find the real value of the measurement, meaning that the test should be done using the Absolute Agreement type. He is also planning on using the average of each player, which means that he is doing an average measurement.
+
+Taking all of this into account, the experiment can be classified as an ICC(3, 6) Absolute Agreement.
+Using the previous statements, the value of interest when using the ICC function would be the ICC3k row.
+
+```{r Q3 ICC}
+ICC_1 <- psych::ICC(df %>% select(Power1, Power2, Power3, Power4, Power5, Power6))
+ICC_1[["results"]] %>% tibble::rownames_to_column() %>% dplyr::filter(str_detect(rowname, 'Average_fixed_raters'))
+```
+
+The ICC for the experiment would be 0.98.
+
+# Question 4
+## a.
+```{r}
+
+```
+
+It seems that about 95% of the values are inside the confidence interval of the Bland-Altman plot. The plot also seems to diverge the bigger the average of the measurements are, in what appears to be a conical shape. This indicates that the larger the measurements, the larger the difference between them. Nonetheless, according to the limited samples obtained by Dr. Wind, it can be concluded that both systems are in agreement in their measurements for the range specified (from 0 to about 55).
+
+## b.
+According to this limitation, Dr. Wind's gas analyzer would not be the adequate system of measurement. This asseveration can be analyzed by counting the number of measurements in which the difference between his system and the top-of-the-line commercial model was less than 5, compared to the total amount of measurements made.
+```{r Q4b Calculation of agreement percentage within a 5 unit limit}
+sum(abs(df[["NewGas"]] - df[["TopGas"]]) <= 5) / nrow(df)
+```
+
+The systems would be in agreement 52% of the times, which would not be enough for a measurement with the desired agreement standard.
+
+## c.
+```{r Q4c Graph with Diagonal Line,  fig.width=10, fig.height = 6}
+#Create the Bland-Altman plot
+ba_plot <- bland.altman.plot(group1 = df$NewGas, group2 = df$TopGas, graph.sys = "ggplot2") +
+  labs(y = 'Difference', x = 'Mean of Measurements') +
+  theme_light()
+
+#Create the line plot
+line_plot <- ggplot(data = df, aes(x = TopGas, y = NewGas)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, colour = "turquoise3") +
+  labs(y = 'New Gas', x = 'Top Gas') +
+  theme_light()
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob(paste("Figure 1. Bland-Altman plot (left) and Pointwise comparison of the TopGas and NewGas measurements, with identity line (right)."), 
+           gp = gpar(fontsize=9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+plot_layout <- rbind(c(1, 2), c(3, 3))
+
+# Plot everything
+grid.arrange(ba_plot, line_plot, figCaption, layout_matrix = plot_layout, heights = c(0.9, 0.1))
+```
+
+It gives very similar information to the Bland-Altman Plot, as it can be seen in the comparison that both are very similar (but one is rotated about 45 degrees compared to the other, when not taking into account the coordinate system). 
+
+Like mentioned above, the coordinate system is also different, where in the line plot you are using the measurements obtained using both machines, in the Bland-Altman plot you are calculating the average value of each pair of measurements against the difference in value of each of those pairs. The most crucial difference between both is the presence of the ±2 Standard Deviation lines (dotted lines) in the Bland-Altman plot, which indicate the intervals for which both measurements can be considered in agreement. This in turn allows for the acceptance or rejection of the possibility of agreement between two measurement systems, models, standards, etc that are being compared.
