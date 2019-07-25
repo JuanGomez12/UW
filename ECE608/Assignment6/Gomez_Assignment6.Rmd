@@ -70,10 +70,6 @@ The ICC for the experiment would be 0.98.
 
 # Question 4
 ## a.
-```{r}
-
-```
-
 It seems that about 95% of the values are inside the confidence interval of the Bland-Altman plot. The plot also seems to diverge the bigger the average of the measurements are, in what appears to be a conical shape. This indicates that the larger the measurements, the larger the difference between them. Nonetheless, according to the limited samples obtained by Dr. Wind, it can be concluded that both systems are in agreement in their measurements for the range specified (from 0 to about 55).
 
 ## b.
@@ -85,7 +81,7 @@ sum(abs(df[["NewGas"]] - df[["TopGas"]]) <= 5) / nrow(df)
 The systems would be in agreement 52% of the times, which would not be enough for a measurement with the desired agreement standard.
 
 ## c.
-```{r Q4c Graph with Diagonal Line,  fig.width=10, fig.height = 6}
+```{r Q4c BA plot and graph with Diagonal Line,  fig.width=10, fig.height = 6}
 #Create the Bland-Altman plot
 ba_plot <- bland.altman.plot(group1 = df$NewGas, group2 = df$TopGas, graph.sys = "ggplot2") +
   labs(y = 'Difference', x = 'Mean of Measurements') +
