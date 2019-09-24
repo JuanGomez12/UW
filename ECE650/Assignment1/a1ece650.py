@@ -3,8 +3,8 @@ import sys
 import re
 
 
-verbose = True  # Print statements to be able to understand what is happening when
-
+verbose = False  # Print statements to be able to understand what is happening when
+oneRun = False
 
 class Street:
     def __init__(self, name, lines):
@@ -12,6 +12,9 @@ class Street:
         self.lines = lines
 
     def __str__(self):
+        return self.name
+
+    def __repr__(self):
         return self.name
 
 
@@ -26,6 +29,9 @@ class Line:
         self.y2 = y2
 
     def __str__(self):
+        return self.name
+
+    def __repr__(self):
         return self.name
 
 
@@ -48,7 +54,7 @@ def streetCheck(parsedLine):
     if not command:
         command = re.findall(r'[r][ ]["][a-zA-Z ]+["]', parsedLine)  # Check if the command has the full correct formatting for r
         if not command:
-            raise Exception("The command formatting contains errors")
+            raise Exception("Error: The command formatting contains errors, check if the coordinates are missing")
         else:
             strtName = getStreetName(parsedLine)
             strtCoords = None
@@ -119,12 +125,19 @@ def addStreet(streetName, streetCoords):
     streetList.append(strt)
 
 
+
+
+
 def intersectionDetection():
-    intersectionList = {}
-    vertexList = {}
-    intersectionCount = 0
-    edgeList = {}
-    vertexDict = {}
+    # intersectionList = {}
+    # vertexList = {}
+    #intersectionCount = 0
+
+    # First delete any previous intersections
+    for street in streetList:
+        for line in street.lines:
+            line.intersections.clear()
+
     for i in range(len(streetList)-1):
         # Get one street
         street1 = streetList[i]
@@ -145,6 +158,7 @@ def intersectionDetection():
                 for l in range(len(street2.lines)):
                     if verbose:
                         print("intersectionDetection: Comparing street 2 segment", l)
+                    collinear = False
                     x3 = street2.lines[l].x1
                     y3 = street2.lines[l].y1
                     x4 = street2.lines[l].x2
@@ -154,144 +168,167 @@ def intersectionDetection():
                         t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator
                         u = - ((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denominator
                         if 0 <= t <= 1 and 0 <= u <= 1:
-                            intersectionCount = intersectionCount + 1
+                            # intersectionCount = intersectionCount + 1
                             xIntersection = round(x1 + t * (x2 - x1), 2)
                             yIntersection = round(y1 + t * (y2 - y1), 2)
-                            intersectionString = "x" + "{0:.2f}".format(xIntersection) + "y" + "{0:.2f}".format(yIntersection)
-                            vertexList["x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1)] = [x1, y1]
-                            vertexList["x" + "{0:.2f}".format(x2) + "y" + "{0:.2f}".format(y2)] = [x2, y2]
-                            vertexList["x" + "{0:.2f}".format(x3) + "y" + "{0:.2f}".format(y3)] = [x3, y3]
-                            vertexList["x" + "{0:.2f}".format(x4) + "y" + "{0:.2f}".format(y4)] = [x4, y4]
-                            intersectionList["x" + "{0:.2f}".format(xIntersection) + "y"
-                                             + "{0:.2f}".format(yIntersection)] = ["intersection"]
+                            intersectionString = "(" + "{0:.2f}".format(xIntersection) + "," + "{0:.2f}".format(yIntersection) + ")"
+                            # vertexList["x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1)] = [x1, y1]
+                            # vertexList["x" + "{0:.2f}".format(x2) + "y" + "{0:.2f}".format(y2)] = [x2, y2]
+                            # vertexList["x" + "{0:.2f}".format(x3) + "y" + "{0:.2f}".format(y3)] = [x3, y3]
+                            # vertexList["x" + "{0:.2f}".format(x4) + "y" + "{0:.2f}".format(y4)] = [x4, y4]
+                            # intersectionList["x" + "{0:.2f}".format(xIntersection) + "y"
+                            #                  + "{0:.2f}".format(yIntersection)] = ["intersection"]
                             street1.lines[j].intersections[intersectionString] = [xIntersection, yIntersection]
                             street2.lines[l].intersections[intersectionString] = [xIntersection, yIntersection]
                     else:
                         # Special case: check if they are collinear and share a point
-                        if x1 == x3 and y1 == y3:
-                            xIntersection = x1
-                            yIntersection = y1
-                            intersectionString = "x" + "{0:.2f}".format(xIntersection) + "y" + "{0:.2f}".format(
-                                yIntersection)
-                            street1.lines[j].intersections[intersectionString] = [xIntersection, yIntersection]
-                            street2.lines[l].intersections[intersectionString] = [xIntersection, yIntersection]
-                        elif x1 == x4 and y1 == y4:
-                            xIntersection = x1
-                            yIntersection = y1
-                            intersectionString = "x" + "{0:.2f}".format(xIntersection) + "y" + "{0:.2f}".format(
-                                yIntersection)
-                            street1.lines[j].intersections[intersectionString] = [xIntersection, yIntersection]
-                            street2.lines[l].intersections[intersectionString] = [xIntersection, yIntersection]
-                        elif x2 == x3 and y2 == y3:
-                            xIntersection = x2
-                            yIntersection = y2
-                            intersectionString = "x" + "{0:.2f}".format(xIntersection) + "y" + "{0:.2f}".format(
-                                yIntersection)
-                            street1.lines[j].intersections[intersectionString] = [xIntersection, yIntersection]
-                            street2.lines[l].intersections[intersectionString] = [xIntersection, yIntersection]
-                        elif x2 == x4 and y2 == y4:
-                            xIntersection = x2
-                            yIntersection = y2
-                            intersectionString = "x" + "{0:.2f}".format(xIntersection) + "y" + "{0:.2f}".format(
-                                yIntersection)
-                            street1.lines[j].intersections[intersectionString] = [xIntersection, yIntersection]
-                            street2.lines[l].intersections[intersectionString] = [xIntersection, yIntersection]
-                            print("Missing case in intersection calculation: one segment within another") # Missing case: one segment contained within another
+                        # if x1 == x3 and y1 == y3:
+                        #     xIntersection = x1
+                        #     yIntersection = y1
+                        #     collinear = True
+                        # elif x1 == x4 and y1 == y4:
+                        #     xIntersection = x1
+                        #     yIntersection = y1
+                        #     collinear = True
+                        # elif x2 == x3 and y2 == y3:
+                        #     xIntersection = x2
+                        #     yIntersection = y2
+                        #     collinear = True
+                        # elif x2 == x4 and y2 == y4:
+                        #     xIntersection = x2
+                        #     yIntersection = y2
+                        #     collinear = True
+                        # if collinear:
+                        #     intersectionString = "(" + "{0:.2f}".format(xIntersection) + "," + "{0:.2f}".format(
+                        #         yIntersection) + ")"
+                        #     street1.lines[j].intersections[intersectionString] = [xIntersection, yIntersection]
+                        #     street2.lines[l].intersections[intersectionString] = [xIntersection, yIntersection]
 
-    vertexList = dict(vertexList.items() + intersectionList.items())  # Combine vertices
-    if verbose:
-        print("IntersectionDetection: Printing the list of intersections found:")
-        for key in sorted(intersectionList.keys()):
-            print("%s: %s" % (key, intersectionList[key]))
-        print("IntersectionDetection: Printing the list of vertices found:")
-        for key in sorted(vertexList.keys()):
-            print("%s: %s" % (key, vertexList[key]))
+                        # Special case: check if one segment partially contains the other (covers collinearity)
+                        if min(x1, x2) <= x3 <= max(x1, x2) and min(y1, y2) <= y3 <= max(y1, y2):
+                            xIntersection = x3
+                            yIntersection = y3
+                            intersectionString = "(" + "{0:.2f}".format(xIntersection) + "," + "{0:.2f}".format(
+                                yIntersection) + ")"
+                            street1.lines[j].intersections[intersectionString] = [xIntersection, yIntersection]
+                            street2.lines[l].intersections[intersectionString] = [xIntersection, yIntersection]
+                        elif min(x1, x2) <= x4 <= max(x1, x2) and min(y1, y2) <= y4 <= max(y1, y2):
+                            xIntersection = x4
+                            yIntersection = y4
+                            intersectionString = "(" + "{0:.2f}".format(xIntersection) + "," + "{0:.2f}".format(
+                                yIntersection) + ")"
+                            street1.lines[j].intersections[intersectionString] = [xIntersection, yIntersection]
+                            street2.lines[l].intersections[intersectionString] = [xIntersection, yIntersection]
+                    print("Missing case in intersection calculation: one segment within another")  # Missing case: one segment contained within another
 
+    # if verbose:
+    #     print("IntersectionDetection: Printing the list of intersections found:")
+    #     for key in sorted(intersectionList.keys()):
+    #         print("%s: %s" % (key, intersectionList[key]))
+    #     print("IntersectionDetection: Printing the list of vertices found:")
+    #     for key in sorted(vertexList.keys()):
+    #         print("%s: %s" % (key, vertexList[key]))
+
+
+
+
+
+def vertexCheck(comparisonKey, vertexCounter, vertexDict):
+    vertexValue = None
+    if comparisonKey not in vertexDict.keys():  # Check if first node is already included in the vertex list
+        vertexValue = "V" + str(vertexCounter)
+        vertexDict[comparisonKey] = vertexValue
+        vertexCounter = vertexCounter + 1
+    else:  # If it is, grab it
+        vertexValue = vertexDict[comparisonKey]
+    return vertexValue, vertexCounter, vertexDict
+
+
+def graphConstruction():
+    edgeList = {}
+    vertexDict = {}
+    vertexCounter = 1
     # Let's reconstruct the edges:
     for street in streetList:  # Let's iterate over every street
         for segment in street.lines:  # Iterate over every segment of each street
             if len(segment.intersections) == 0:  # Check if the segment has intersections, if not skip it
                 continue
-            x1 = segment.x1
-            y1 = segment.y1
-            x2 = segment.x2
-            y2 = segment.y2
+            x1 = float(segment.x1)
+            y1 = float(segment.y1)
+            x2 = float(segment.x2)
+            y2 = float(segment.y2)
+
+            sortNeeded = False
+            reverseSegment = False
 
             if x2 > x1:
-                for key in sorted(segment.intersections.keys()):
-                    if key != "x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1):
-                        edgeList["x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1) + "," + key] = []
-                        x1 = segment.intersections[key][0]
-                        y1 = segment.intersections[key][1]
-                if x1 != x2 and y1 != y2:
-                    edgeList["x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1) + "," + "x" +
-                             "{0:.2f}".format(x2) + "y" + "{0:.2f}".format(y2)] = []
+                sortNeeded = True
             elif x2 == x1:  # Segments are vertical
                 if y2 > y1:
-                    for key in sorted(segment.intersections.keys()):
-                        if key != "x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1):
-                            edgeList["x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1) + "," + key] = []
-                            x1 = segment.intersections[key][0]
-                            y1 = segment.intersections[key][1]
-                    if x1 != x2 and y1 != y2:
-                        edgeList["x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1) + "," + "x" +
-                                 "{0:.2f}".format(x2) + "y" + "{0:.2f}".format(y2)] = []
+                    sortNeeded = True
                 elif y2 < y1:
-                    for key in reversed(sorted(segment.intersections.keys())):
-                        if key != "x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1):
-                            edgeList["x" + "{0:.2f}".format(x2) + "y" + "{0:.2f}".format(y2) + "," + key] = []
-                            x2 = segment.intersections[key][0]
-                            y2 = segment.intersections[key][1]
-                    if x1 != x2 and y1 != y2:
-                        edgeList["x" + "{0:.2f}".format(x2) + "y" + "{0:.2f}".format(y2) + "," + "x" +
-                                 "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1)] = []
+                    sortNeeded = True
+                    reverseSegment = True
             elif x2 < x1:
-                for key in reversed(sorted(segment.intersections.keys())):
-                    if key != "x" + "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1):
-                        edgeList["x" + "{0:.2f}".format(x2) + "y" + "{0:.2f}".format(y2) + "," + key] = []
+                sortNeeded = True
+                reverseSegment = True
+            # Falta que el sorting sea hecho con respecto a los valores numericos, no al string
+
+            segmentIntersections = sorted(segment.intersections.values(), key=lambda tup: (tup[0], tup[1]))
+
+            if sortNeeded and not reverseSegment:
+                for element in segmentIntersections:
+                    key = "(" + "{0:.2f}".format(element[0]) + "," + "{0:.2f}".format(element[1]) + ")"
+                    comparisonKey = "(" + "{0:.2f}".format(x1) + "," + "{0:.2f}".format(y1) + ")"
+                    vertexValue, vertexCounter, vertexDict = vertexCheck(comparisonKey, vertexCounter, vertexDict)
+                    vertexValue2, vertexCounter, vertexDict = vertexCheck(key, vertexCounter, vertexDict)
+
+                    if key != comparisonKey: # If coordinate pair is not the same as the intersection being analyzed, add edge
+                        edgeList["<" + vertexValue + "," + vertexValue2 + ">"] = []
+                        # Change coordinate pair being analyzed for just analyzed intersection coordinates:
+                        x1 = segment.intersections[key][0]
+                        y1 = segment.intersections[key][1]
+                if x1 != x2 or y1 != y2:  # If intersection coordinates and final coordinates are not the same:
+                    comparisonKey = "(" + "{0:.2f}".format(x1) + "," + "{0:.2f}".format(y1) + ")"
+                    vertexValue, vertexCounter, vertexDict = vertexCheck(comparisonKey, vertexCounter, vertexDict)
+
+                    comparisonKey = "(" + "{0:.2f}".format(x2) + "," + "{0:.2f}".format(y2) + ")"
+                    vertexValue2, vertexCounter, vertexDict = vertexCheck(comparisonKey, vertexCounter, vertexDict)
+                    edgeList["<" + vertexValue + "," + vertexValue2+ ">"] = []
+
+            elif sortNeeded and reverseSegment:
+                for element in segmentIntersections:
+                    key = "(" + "{0:.2f}".format(element[0]) + "," + "{0:.2f}".format(element[1]) + ")"
+                    comparisonKey = "(" + "{0:.2f}".format(x2) + "," + "{0:.2f}".format(y2) + ")"
+                    vertexValue, vertexCounter, vertexDict = vertexCheck(comparisonKey, vertexCounter, vertexDict)
+                    vertexValue2, vertexCounter, vertexDict = vertexCheck(key, vertexCounter, vertexDict)
+
+                    if key != comparisonKey:
+                        edgeList["<" + vertexValue + "," + vertexValue2 + ">"] = []
                         x2 = segment.intersections[key][0]
                         y2 = segment.intersections[key][1]
-                if x1 != x2 and y1 != y2:
-                    edgeList["x" + "{0:.2f}".format(x2) + "y" + "{0:.2f}".format(y2) + "," + "x" +
-                             "{0:.2f}".format(x1) + "y" + "{0:.2f}".format(y1)] = []
-            if verbose:
-                print("Sort finished")
+                if x1 != x2 or y1 != y2:  # If intersection coordinates and final coordinates are not the same:
+                    comparisonKey = "(" + "{0:.2f}".format(x2) + "," + "{0:.2f}".format(y2) + ")"
+                    vertexValue, vertexCounter, vertexDict = vertexCheck(comparisonKey, vertexCounter, vertexDict)
 
-    vertexCount = 1
-    for key in edgeList.keys():
-        vertex1 = re.findall(r'[x][-]?[0-9]+[\.]?[0-9]*[y][-]?[0-9]+[\.]?[0-9]*[,]', key)
-        vertex1 = re.sub(r'[x,]', "", vertex1[0])
-        vertex1 = re.sub(r'[y]', ",", vertex1)
-        vertex2 = re.findall(r'[,][x][-]?[0-9]+[\.]?[0-9]*[y][-]?[0-9]+[\.]?[0-9]*', key)
-        vertex2 = re.sub(r'[x,]', "", vertex2[0])
-        vertex2 = re.sub(r'[y]', ",", vertex2)
-        if vertex1 not in vertexDict.keys():
-            vertexDict[vertex1] = vertexCount
-            vertexCount = vertexCount + 1
-        if vertex2 not in vertexDict.keys():
-            vertexDict[vertex2] = vertexCount
-            vertexCount = vertexCount + 1
-        edgeList[key] = [str(vertexCount-2) + "," + str(vertexCount-1)]
+                    comparisonKey = "(" + "{0:.2f}".format(x1) + "," + "{0:.2f}".format(y1) + ")"
+                    vertexValue2, vertexCounter, vertexDict = vertexCheck(comparisonKey, vertexCounter, vertexDict)
+                    edgeList["<" + vertexValue + "," + vertexValue2 + ">"] = []
+
     if verbose:
-        print("IntersectionDetection: Printing the list of vertices: ")
-        for value in sorted(vertexDict.values()):
-            print(value)
-        sortedVertexDict = sorted((value, key) for (key, value) in vertexDict.items())
-        print("Sorted vertices:")
-        for element in sortedVertexDict:
-            print(str(element[0]) + ": " + element[1])
-        print("IntersectionDetection: Printing the list of edges found:")
-        #for key in sorted(edgeList.keys()):
-        #    print("%s: %s" % (key, edgeList[key]))
-        for value in sorted(edgeList.values()):
-            print(value)
-        print("done") #vertex pairs are not printing correctly, check afterwards
+        print("IntersectionDetection: Printing the list of vertices found:")
+        for key in sorted(vertexDict.keys()):
+            print("%s: %s" % (key, vertexDict[key]))
+        print("IntersectionDetection: Printing the list of vertices found:")
+        for key in sorted(edgeList.keys()):
+            print("%s: %s" % (key, edgeList[key]))
+    return vertexDict, edgeList
 
 
 def checkLine(parsedLine):
     if verbose:
         print("CheckLine: Input line is: ", parsedLine)
-    cmnd=re.match(r'\b[acgr]', parsedLine)  # Check if line has a command at the beginning
+    cmnd = re.match(r'\b[acgr]', parsedLine)  # Check if line has a command at the beginning
     if cmnd:  # If a command is found
         cmnd = cmnd.group()  # Assign the string instead of the object
         if verbose:
@@ -309,15 +346,20 @@ def checkLine(parsedLine):
             print("CheckLine: Street coordinates are", strtCoords)
         addStreet(strtName, strtCoords) # Call the add street function
     elif cmnd == 'c':
+        if verbose:
+            print('Change street')
         strtName, strtCoords = streetCheck(parsedLine)
-        print('Change street')
+        removeStreet(strtName)
+        addStreet(strtName, strtCoords)
     elif cmnd == 'r':
+        if verbose:
+            print('Remove street')
         strtName = streetCheck(parsedLine)[0]
         removeStreet(strtName)
-
     elif cmnd == 'g':
-      print('Graph')
-      graphStuff()
+        if verbose:
+            print('Graph')
+        graphStuff()
     else:
         raise Exception('Error: Command not in the list of possible commands')
 
@@ -334,50 +376,56 @@ def printStreetList():
     for i in range(len(streetList)):
         print("printStreetList: Street number", i, ":", streetList[i].name)
 
+
 def graphStuff():
-    if streetList==[]:
-        print("V = {\n\n}")
-        print("E = {\n\n}")
-    else:
-        intersectionDetection()
+    """
+Calls the intersectionDetection function and the graphConstruction function, and then proceeds to output those results
+into the required printing format
+    """
+    intersectionDetection()
+    vertices, edges = graphConstruction()
+    print("V = {")
+    for key in sorted(vertices.keys()):
+        print("%s: %s" % (vertices[key], key))
+    print("}")
+    print("E = {")
+    totalEdges = len(edges)
+    printerCount = 1
+    for key in sorted(edges.keys()):
+        if printerCount < totalEdges:
+            print(key + ",")
+        else:
+            print(key)
+        printerCount = printerCount + 1
+    print("}")
 
 
 def main():
-
-    #    while True:
-    #        try:
-    #            if verbose:
-    #                print('Please input a command: \n' )
-    #            line = sys.stdin.readline()
-    #            if re.match('exit', line, re.I):
-    #                sys.exit(0)
-    #            checkLine(line)
-    #        except Exception as ex:
-    #            sys.stderr.write(str(ex) + '\n')
-    # DO SOMETHING
-    # return(1)
+    if not oneRun:
+        while True:
+            try:
+                if verbose:
+                    print('Please input a command: \n' )
+                line = sys.stdin.readline()
+                if line == '':
+                    break
+                #    sys.exit(0)
+                checkLine(line)
+            except Exception as ex:
+                sys.stderr.write(str(ex) + '\n')
+        sys.exit(0)
+    else:
+        while True:
+            if verbose:
+                print('Please input a command: \n' )
+            line = sys.stdin.readline()
+            if line == '':
+                break
+            #    sys.exit(0)
+            checkLine(line)
+        sys.exit(0)
 
     # return exit code 0 on successful termination
-
-    counter = 0
-    while True:
-        if counter < 1:
-            line = 'a "Weber Street" (-10,-10) (2,-1) (2,2) (5,5) (5,6) (3,8)'
-            checkLine(line)
-            line = 'a "King Street S" (4,2) (4,8)'
-            checkLine(line)
-            line = 'a "Davenport Road" (1,4) (5,8) (10,10)'
-            checkLine(line)
-            line = 'a "Tarnulfo Street" (6,4)(5,4)(5,6)(6,7)'
-            checkLine(line)
-            counter = counter+1
-        if verbose:
-            print('Please input a command: \n' )
-        line = sys.stdin.readline()
-        if re.match('exit', line, re.I):
-            sys.exit(0)
-        checkLine(line)
-        # return exit code 0 on successful termination
 
 
 if __name__ == '__main__':
