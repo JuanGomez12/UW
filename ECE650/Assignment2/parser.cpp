@@ -3,9 +3,10 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 bool parse_line (const std::string &line,
-                 char &cmd, int &argnum, std::string &argstr, std::string &err_msg) {
+                 char &cmd, int &argnum, std::vector<int> &numVec, std::string &err_msg) {
 
     std::istringstream input(line);
 
@@ -42,20 +43,67 @@ bool parse_line (const std::string &line,
         return true;
     }
     else if (ch == 'E') {
-        std::string edges;
-        input >> edges;
+        /*
+        int num;
+        input >> num;
         if (input.fail()) {
             err_msg = "Missing or bad argument";
             return false;
         }
+        std::cout<< "Edge: Number found: "<< num;
         ws(input);
         if (!input.eof()) {
             err_msg = "Unexpected argument";
             return false;
         }
         cmd = ch;
-        argstr = edges;
+        //argstr = edges;
         return true;
+        */
+       char character;
+       int edge;
+       input >> character;
+       if (input.fail() || character != '{'){
+           err_msg = "Missing or bad argument, possibly missing '{'";
+           return false;
+       }
+       while (!input.eof()){
+           input >> character;
+            if (input.fail() || character != '<'){
+                err_msg = "Missing or bad argument, possibly missing '<'";
+                return false;  
+            }
+            input >> edge;
+            if(input.fail()){
+                err_msg = "Missing or bad argument, expected number";
+                return false;  
+            }
+            numVec.push_back(edge);
+            input >> character;
+            if (input.fail() || character != ','){
+                err_msg = "Missing or bad argument, possibly missing ','";
+                return false;  
+            }
+            input >> edge;
+            if(input.fail()){
+                err_msg = "Missing or bad argument, expected number";
+                return false;  
+            }
+            numVec.push_back(edge);
+            input >> character;
+            if (input.fail() || character != '>'){
+                err_msg = "Missing or bad argument, possibly missing '>'";
+                return false;  
+            }
+            input >> character;
+            if (character == ',' || character == '}'){
+                input >> character;
+            }
+            else if(input.fail()){
+                err_msg = "Missing or bad argument, possibly missing '>'";
+                return false;  
+            }
+       }
     }
     else if (ch == 'S') {
         int num;
@@ -79,8 +127,9 @@ bool parse_line (const std::string &line,
         }
 
         cmd = ch;
-        argnum = num;
-        argstr = std::to_string(num2);
+        numVec.clear();
+        numVec.push_back(num);
+        numVec.push_back(num2);
         return true;
     }
     else {

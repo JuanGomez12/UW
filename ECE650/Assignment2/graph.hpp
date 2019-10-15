@@ -12,16 +12,19 @@ class Graph
     int V;    // No. of vertices 
   
     std::vector<std::vector<int>> adjMat;
-public: 
-    Graph(const int vertNum);  // Constructor 
-    //Function to change the number of vertices of the graph
-    void setV(int vertNum);
-    //Function to get the number of vertices of the graph
+public:
+    //Constructor for the class
+    Graph(const int vertNum);
+    //Function to change the number of vertices of the graph.
+    void setV(const int vertNum);
+    //Function that resets all the values of the adjacency matrix to 0
+    void resetAdjMat();
+    //Function to get the number of vertices of the graph.
     int getV();
-    // Function to add an edge to the graph
-    void addEdge(const int u, const int v);  
-    // Function to print the graph. Mainly for debugging
+    // Function to add an edge to the graph with a weight. If weight is not specified it is assumed to be 1.
+    bool addEdge(const int u, const int v, int w = 1);
+    // Function to print the adjacency matrix of the graph. Mainly for debugging.
     void printGraph();
     // Function that finds and prints the shortest traversal path between s and d, if it exists. 
-    bool searchShortest(int s, int d);
+    bool shortestPath(int s, int d);
 }; 

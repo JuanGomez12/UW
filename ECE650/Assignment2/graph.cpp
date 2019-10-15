@@ -11,39 +11,46 @@ bool verboseGraph = 1; //Makes the graph functions write more information to the
 Graph::Graph(const int vertices): V(vertices), adjMat(vertices, std::vector<int>(vertices, 0)) {}
 int Graph::getV() { return V; }
 
-void Graph::setV(int vertices){
-    V = vertices;
-    std::vector<int> intVector(V, 0);
-    adjMat.resize(V, intVector);
+void Graph::resetAdjMat(){
+    
+}
+
+void Graph::setV(const int newVertices){
+    Graph::V = newVertices;
+    Graph::adjMat.assign(newVertices, std::vector<int>(newVertices, 0));
 }
 
 
-void Graph::addEdge(int u, int v) 
+bool Graph::addEdge(int u, int v, int w) 
 { 
-    adjMat[u][v] = 1; 
-    adjMat[v][u] = 1; 
+    if (u < Graph::V && v < Graph::V){
+        Graph::adjMat[u][v] = w; 
+        Graph::adjMat[v][u] = w;
+        return 1;
+    }
+    return 0;
 } 
+
 
 void Graph::printGraph() 
 {
     std::cout << "Adjacency Matrix:" << "\n" << " | ";
-    for (int i = 0; i < V; ++i){
+    for (int i = 0; i < Graph::V; ++i){
         std::cout << i << " ";
     } 
     std::cout << "\n" << "------------------------------\n";
-    for (int i = 0; i < V; ++i) 
+    for (int i = 0; i < Graph::V; ++i) 
     {
         std::cout << i << "| ";
-        for (int j = 0; j < V; ++j){
-           std::cout << adjMat[i][j] << " ";
+        for (int j = 0; j < Graph::V; ++j){
+           std::cout << Graph::adjMat[i][j] << " ";
         }
         std::cout << "\n";
     } 
 } 
 
-bool Graph::searchShortest(int s, int d){
+bool Graph::shortestPath(int s, int d){
     //Create a copy of the adjacency matrix to operate in it and not modify the original
-    std::vector<std::vector<int>> adjMatCopy = adjMat; 
     int maxInt = INT_MAX; //Maximum value that an int can be
     std::list<int> Q(V); //Create queue
     std::vector<int> dist(V, maxInt); //Create distance vector
@@ -57,9 +64,9 @@ bool Graph::searchShortest(int s, int d){
         int minDist = maxInt;
         int u;
         for(auto it = Q.cbegin(); it != Q.cend(); it++){//Iterate over all the elements still on the queue
-            if (dist.at(*it) < minDist){//Find the one with the minimum distance
-                minDist = dist.at(*it);
-                u = *it;
+            if (dist.at(*it) < minDist){//Figure if the vertex being inspected has a smaller distance than the previous min
+                minDist = dist.at(*it);//If it is so, set is as the new minimum distance
+                u = *it;//Assign that vertex as the one that will be calculated
             }
         }
         Q.remove(u); //Remove u from our queue
@@ -77,34 +84,40 @@ bool Graph::searchShortest(int s, int d){
         }
         */
         for(auto it = Q.cbegin(); it != Q.cend(); it++){
-            int v = adjMat[u][*it];
+            int v = adjMat.at(u).at(*it);
             if(v != 0){
-                int alternative = dist[u] + 1; //Calculate its alternative distance. Change from 1 to v if the edges have different weights.
-                if (alternative < dist[*it]){//If the new distance to this vertex is smaller than the rpeviously saved distance.
-                    dist[*it] = alternative; //Set the newly found distance as the new distance in our distance vector
-                    prev[*it] = u; //Set the 
+                int alternative = dist.at(u) + 1; //Calculate its alternative distance. Change from 1 to v if the edges have different weights.
+                if (alternative < dist.at(*it)){//If the new distance to this vertex is smaller than the rpeviously saved distance.
+                    dist.at(*it) = alternative; //Set the newly found distance as the new distance in our distance vector
+                    prev.at(*it) = u; //Set the 
                 }
             }
         }
         if(u == d){
+            //Optimal path found
             if (verboseGraph){
-                std::cout<<"Arrived at destination node";
-                std::vector<int> vec;
-                int location = d;
-                while(location != s){
-                    vec.push_back(location);
-                    location = prev[location];
-                }
-                int vecSize = vec.size();
-                for (int i = 0; i < vecSize; i++){
-                    std::cout<<vec.at(i);
-                    if(i < vecSize - 1){
-                        std::cout<<"-";
-                    }
-                }
-                std::cout<<"\n";
-                return 1;
+                std::cout<<"Arrived at destination node\n";
             }
+            //Print the optimal path
+            //First recreate the vector for the optimal path from destination to source
+            std::vector<int> vec;
+            int location = d;
+            while(location != s){
+                vec.push_back(location);
+                location = prev[location];
+            }
+            vec.push_back(s); //Add source to the vector
+            int vecSize = vec.size();//Obtain the size of the array
+            for (int i = 0; i < vecSize; i++){
+                std::cout<<vec.at(i);//Print the vertex
+                if(i < vecSize - 1){
+                    std::cout<<"-";//If it is not the last vertex, add a hyphen
+                }
+                else{
+                    std::cout<<"\n";//End the line
+                }
+            }
+            return 1;
         }
     }
     if (verboseGraph){
