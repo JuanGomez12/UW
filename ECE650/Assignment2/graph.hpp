@@ -17,8 +17,6 @@ public:
     Graph(const int vertNum);
     //Function to change the number of vertices of the graph.
     void setV(const int vertNum);
-    //Function that resets all the values of the adjacency matrix to 0
-    void resetAdjMat();
     //Function to get the number of vertices of the graph.
     int getV();
     // Function to add an edge to the graph with a weight. If weight is not specified it is assumed to be 1.
