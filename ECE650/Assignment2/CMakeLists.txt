@@ -6,6 +6,7 @@ project(ece650-a2)
 
 # enable c++11 support
 set (CMAKE_CXX_FLAGS "-std=c++11 -Wall ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*,-fuchsia-default-arguments")
 
 # create the main executable
 ## add additional .cpp files if needed

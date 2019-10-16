@@ -25,7 +25,7 @@ bool parse_line (const std::string &line,
         err_msg = "Failed to read input";
         return false;
     }
-
+    //Check if the command was a V
     if (ch == 'V') {
         cmd = 'N'; //Make the command a different value so that in case something fails it doesn't interfere
         int num;
@@ -43,7 +43,8 @@ bool parse_line (const std::string &line,
         argnum = num; //Add the found number into the argnum
         return true;
     }
-    else if (ch == 'E') {
+    //Check if the command was an E
+    if (ch == 'E') {
         cmd = 'N'; //Make the command a different value so that in case something fails it doesn't interfere
         char character;
         int edge;
@@ -87,12 +88,12 @@ bool parse_line (const std::string &line,
             input >> character;
             if (character == '}'){//It seems like it is the end of the string, but let's make sure that there isn't anything else
                 ws(input);
-                if (!input.eof()) {
-                    err_msg = "Unexpected argument";
-                    return false;
+                if (input.eof()) {
+                    doneParsing = true;
                 }
                 else{
-                    doneParsing = true;
+                    err_msg = "Unexpected argument";
+                    return false;
                 }
             }
             else if(character == ','){//It seems like there are more elements and it is not the end of the stream
@@ -106,7 +107,8 @@ bool parse_line (const std::string &line,
         cmd = ch;
         return true;
     }
-    else if (ch == 'S') {//S selected
+    //Check if the command was an S
+    if (ch == 'S') {//S selected
         cmd = 'N'; //Make the command a different value so that in case something fails it doesn't interfere
         int num;
         input >> num; //Check if the first element is a number
@@ -134,9 +136,6 @@ bool parse_line (const std::string &line,
         numVec.push_back(num2);//Push the second number
         return true;
     }
-    else {
-        err_msg = "Unknown command";
-        return false;
-    }
-
+    err_msg = "Unknown command";
+    return false;
 }
