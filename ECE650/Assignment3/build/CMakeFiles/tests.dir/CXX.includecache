@@ -1,0 +1,78 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/mnt/c/c code/doctest.h
+ciso646
+-
+iosfwd
+-
+iosfwd
+-
+cstddef
+-
+type_traits
+-
+doctest_fwd.h
+/mnt/c/c code/doctest_fwd.h
+ctime
+-
+cmath
+-
+math.h
+-
+new
+-
+cstdio
+-
+cstdlib
+-
+cstring
+-
+limits
+-
+utility
+-
+sstream
+-
+iomanip
+-
+vector
+-
+set
+-
+exception
+-
+stdexcept
+-
+csignal
+-
+cfloat
+-
+stdint.h
+-
+unistd.h
+-
+AfxWin.h
+-
+windows.h
+-
+io.h
+-
+sys/time.h
+-
+sys/types.h
+-
+unistd.h
+-
+sys/sysctl.h
+-
+
+/mnt/c/c code/test.cpp
+doctest.h
+/mnt/c/c code/doctest.h
+

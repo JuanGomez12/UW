@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/mnt/c/c code/driver.cpp
+iostream
+-
+fstream
+-
+sstream
+-
+string
+-
+vector
+-
+unistd.h
+-
+signal.h
+-
+sys/wait.h
+-
+

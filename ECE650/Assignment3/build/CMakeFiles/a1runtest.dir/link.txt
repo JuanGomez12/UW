@@ -1,0 +1,1 @@
+/usr/bin/c++  -std=c++11 -Wall   -rdynamic CMakeFiles/a1runtest.dir/a1run_test.cpp.o  -o a1runtest 

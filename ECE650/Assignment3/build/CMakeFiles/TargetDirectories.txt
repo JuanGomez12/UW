@@ -1,0 +1,12 @@
+/mnt/c/c code/build/CMakeFiles/install/strip.dir
+/mnt/c/c code/build/CMakeFiles/install/local.dir
+/mnt/c/c code/build/CMakeFiles/list_install_components.dir
+/mnt/c/c code/build/CMakeFiles/rebuild_cache.dir
+/mnt/c/c code/build/CMakeFiles/rgen.dir
+/mnt/c/c code/build/CMakeFiles/tests.dir
+/mnt/c/c code/build/CMakeFiles/ece650-a2.dir
+/mnt/c/c code/build/CMakeFiles/ece650-a3-test.dir
+/mnt/c/c code/build/CMakeFiles/install.dir
+/mnt/c/c code/build/CMakeFiles/ece650-a3.dir
+/mnt/c/c code/build/CMakeFiles/edit_cache.dir
+/mnt/c/c code/build/CMakeFiles/a1runtest.dir

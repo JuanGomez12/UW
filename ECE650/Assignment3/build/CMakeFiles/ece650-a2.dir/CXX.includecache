@@ -1,0 +1,56 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/mnt/c/c code/ece650-a2.cpp
+iostream
+-
+sstream
+-
+string
+-
+vector
+-
+graph.hpp
+/mnt/c/c code/graph.hpp
+parser.hpp
+/mnt/c/c code/parser.hpp
+
+/mnt/c/c code/graph.cpp
+climits
+-
+iostream
+-
+list
+-
+vector
+-
+graph.hpp
+/mnt/c/c code/graph.hpp
+
+/mnt/c/c code/graph.hpp
+vector
+-
+
+/mnt/c/c code/parser.cpp
+iostream
+-
+sstream
+-
+string
+-
+vector
+-
+parser.hpp
+/mnt/c/c code/parser.hpp
+
+/mnt/c/c code/parser.hpp
+string
+-
+vector
+-
+

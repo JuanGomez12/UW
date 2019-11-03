@@ -1,0 +1,1 @@
+/usr/bin/c++  -std=c++11 -Wall   -rdynamic CMakeFiles/rgen.dir/rgen.cpp.o  -o rgen 
