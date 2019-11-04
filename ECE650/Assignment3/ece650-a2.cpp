@@ -86,6 +86,8 @@ int main(int argc, char** argv) {
                             //If there was no error state, modify the flags for vertex_selected and edges_selected
                             vertex_selected = false;
                             edges_selected = true;
+                            std::cout << "V " << graph.getV() <<std::endl;
+                            std::cout << line << std::endl;
                         }
                     }
                     else {
@@ -145,8 +147,8 @@ int main(int argc, char** argv) {
             //edges_selected = false;
         }
     }
-    if (verbose){
-        std::cerr << "[A2]: Saw EOF" << std::endl;
-    }
+    //if (verbose){
+        std::cout << "[A2]: Saw EOF" << std::endl;
+    //}
     return 0; //Return 0 after EOF
 }

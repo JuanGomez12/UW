@@ -23,6 +23,8 @@ public:
     int getV();
     // Function to add an edge to the graph with a weight. If weight is not specified it is assumed to be 1.
     bool addEdge(const int u, const int v, int w = 1);
+    //Function that returns in a string form the edges of the graph
+    std::string getEdges();
     // Function to print the adjacency matrix of the graph. Mainly for debugging.
     void printGraph();
     // Function that finds and prints the shortest traversal path between s and d, if it exists. 

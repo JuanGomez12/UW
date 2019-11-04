@@ -16,46 +16,6 @@ int l = 5;
 int c = 20;
 bool verbose = true;
 
-/// Entry point of process A
-int procA(void) {
-    // Process A writing to C
-    for (int i = 0; i < 100; i++)
-    {
-        std::cout << "Hi" << std::endl;
-        usleep(5000);
-    }
-    std::cout << "[A] Sleeping" << std::endl;
-    sleep(6);
-    std::cout << "[A] Exiting" << std::endl;
-    return 0;
-}
-
-/// Entry point of process B
-int procB(void) {
-    // Process B writing to C
-    while (!std::cin.eof()) {
-        // read a line of input until EOL and store in a string
-        std::string line;
-        std::getline(std::cin, line);
-        if (line.size () > 0)
-            std::cout << line << std::endl;
-    }
-    std::cout << "[B] saw EOF" << std::endl;
-    return 0;
-}
-
-/// Entry point of process C
-int procC(void) {
-    // Process C reading from both A and B
-    while (!std::cin.eof()) {
-        // read a line of input until EOL and store in a string
-        std::string line;
-        std::getline(std::cin, line);
-        if (line.size () > 0)
-            std::cout << "[C]: " << line << std::endl;
-    }
-    return 0;
-}
 
 int main (int argc, char **argv)
 {
@@ -109,15 +69,60 @@ int main (int argc, char **argv)
 
 //Forking
     // create a pipe
-    std::vector<pid_t> kids;
+    std::vector<pid_t> running_proc;
     pid_t child_pid;
+
+    int rgen_input[2];
+    pipe(rgen_input);
+
+    int A1_input[2];
+    pipe(A1_input);
+
+    int A2_input[2];
+    pipe(A2_input);
+
+
+//Assignment 1 process and pipes
+
+    //Construct command line arguments
+    char* a1_argv[2];
+    a1_argv[0] = (char*)"ece650-a1.py";
+    a1_argv[2] = nullptr;
+    if (verbose){
+        std::cout << "[exec] executing './ece650-a1.py' using execv" << std::endl;
+    }
+    child_pid = fork ();
+    if (child_pid == 0) {
+        //Close rgen_input pipes
+        close(rgen_input[1]);
+        close(rgen_input[0]);
+        //Configure rgen to A1 pipes
+        dup2(A1_input[0], STDIN_FILENO);
+        close(A1_input[1]);
+        close(A1_input[0]);
+        //Configure A1 to A2 pipes
+        dup2(A2_input[1], STDOUT_FILENO); //Duplicate the standard output
+        close(A2_input[0]); //Close the input side of the pipe
+        close(A2_input[1]); //Close the output side of the pipe
+        //Run A1
+        execv ("./ece650-a1.py", a1_argv);
+        perror ("Error from A1");
+        return 1;
+    }
+    running_proc.push_back(child_pid);
     //----------------------------------------------------------------------------------------------------------------------------------------
     //rgen process and pipes
-    int rgen_to_A1[2];
-    pipe(rgen_to_A1);
+
+
+
+
+    //int A2_to_All[2];
+    //pipe(A2_to_All);
+
 
     
     //Construct command line arguments
+    /*
     char* rgen_argv[10];
 
     rgen_argv[0] = (char*)"rgen";
@@ -130,6 +135,12 @@ int main (int argc, char **argv)
     rgen_argv[7] = (char*)"-c";
     rgen_argv[8] = (char*)c;
     rgen_argv[9] = nullptr;
+    */
+    ///*
+   char* rgen_argv[2];
+   rgen_argv[0] = (char*)"rgen";
+   rgen_argv[1] = nullptr;
+   //*/
     if (verbose){
         std::cout << "[exec] executing './rgen' using execv" << std::endl;
     }
@@ -137,107 +148,96 @@ int main (int argc, char **argv)
     child_pid = fork ();
     if (child_pid == 0) {
         //sleep (4);
-        //Configure pipes for rgen_to_A1
-        close(rgen_to_A1[0]);
-        dup2(rgen_to_A1[1], STDOUT_FILENO);
-        close(rgen_to_A1[1]);
+        //Configure pipes for rgen input
+        dup2(rgen_input[0], STDIN_FILENO);
+        close(rgen_input[1]);
+        close(rgen_input[0]);
+        //Configure pipes for A1_input
+        dup2(A1_input[1], STDOUT_FILENO);
+        close(A1_input[0]);
+        close(A1_input[1]);
+        //Close A2_input
+        close(A2_input[0]);
+        close(A2_input[1]);
         execv ("./rgen", rgen_argv);
 
         // execl("/bin/ls", "ls", "-l", nullptr);
-        perror ("Error from arie");
+        perror ("Error from rgen");
         return 1;
     }
     else if (child_pid < 0) {
         std::cerr << "Error: could not fork\n";
         return 1;
     }
-    kids.push_back(child_pid);
+    running_proc.push_back(child_pid);
     
     //------------------------------------------------------------------------------------------------------------------------------------
-    //Assignment 1 process and pipes
-    int A1_to_A2[2];
-    pipe(A1_to_A2);
+    
+    
 
-    //Construct command line arguments
-    char* a1_argv[2];
-    a1_argv[0] = (char*)"ece650-a1.py";
-    a1_argv[2] = NULL;
-    if (verbose){
-        std::cout << "[exec] executing './ece650-a1.py' using execv" << std::endl;
-    }
 
-    sleep(0.5);
     child_pid = fork ();
-    if (child_pid == 0) {
-        //sleep (4);
-        //Configure pipes for rgen_to_A1
-        close(rgen_to_A1[1]);
-        dup2(rgen_to_A1[0], STDIN_FILENO);
-        close(rgen_to_A1[0]);
+    if (child_pid == 0) {//run input controller
+        //Configure rgen pipe
+        dup2(rgen_input[1], STDOUT_FILENO);
+        close(rgen_input[0]);
+        close(rgen_input[1]);
+        //Configure A2 pipe
+        dup2(A2_input[1], STDOUT_FILENO);
+        close(A2_input[0]);
+        close(A2_input[1]);
+        //Configure A1 pipe
+        close(A1_input[0]);
+        close(A1_input[1]);
 
-        //Configure pipes for A1_to_A2
-        close(A1_to_A2[0]);
-        dup2(A1_to_A2[1], STDOUT_FILENO);
-        close(A1_to_A2[1]);
-        execv ("./ece650-a1.py", a1_argv);
-
-        // execl("/bin/ls", "ls", "-l", nullptr);
-        perror ("Error from arie");
-        return 1;
+        while (!std::cin.eof()) {
+            // read a line of input until EOL and store in a string
+            
+            std::string line;
+            std::getline(std::cin, line);
+            std::cout << line << std::endl;
+        }
+        if (verbose){
+            std::cerr <<"[inputController]: Saw EOF" << std::endl;
+        }
+        
+        //pid_t parent_pid = getppid();
+        //running_proc.push_back(parent_pid);
+        for (pid_t k : running_proc) {
+        int status;
+        kill (k, SIGTERM);
+        waitpid(k, &status, 0);
+        }
+        return 0;
     }
-    else if (child_pid < 0) {
-        std::cerr << "Error: could not fork\n";
-        return 1;
-    }
-    kids.push_back(child_pid);
-
-    // close rgen I/O config in relation to A1 pipes
-    close(rgen_to_A1[0]);
-    close(rgen_to_A1[1]);
-    
-    //-------------------------------------------------------------------------------------------------------------------------------------
+    running_proc.push_back(child_pid);
+    //------------------------------------------------------------------------------------------------------------------------------------
     //Assignment 2 process and pipes
-    //int driver_to_A2[2];
-    //pipe(driver_to_A2);
 
+    //A2 process
+    //First configure the pipes
+    //Configure pipes from A2 to rgen
+    close(rgen_input[1]);
+    close(rgen_input[0]);
 
-    //A1_to_A2 pipe config
-    close(A1_to_A2[1]);
-    dup2(A1_to_A2[0], STDIN_FILENO);
-    close(A1_to_A2[0]);
-    
-    
-    //Construct command line arguments
+    //Close the A1 input pipes
+    close(A1_input[1]);
+    close(A1_input[0]);
+
+    //Config pipe to input of A2
+    dup2(A2_input[0], STDIN_FILENO);
+    close(A2_input[1]);
+    close(A2_input[0]);
+
     char* a2_argv[2];
-    sleep(2);
     a2_argv[0] = (char*)"ece650-a2";
     a2_argv[1] = nullptr;
     if (verbose){
-        std::cout << "[exec] executing '/mnt/c/c code/build/ece650-a2' using execv" << std::endl;
+        std::cout << "[exec] executing './ece650-a2' using execv" << std::endl;
     }
-    //sleep (4);
-        //Pipe config in relation to driver
-    //close(driver_to_A2[1]);
-    //dup2(driver_to_A2[0], STDIN_FILENO);
-    //close(driver_to_A2[0]);
-
-    //Pipe config in relation to A1
-    //close(A1_to_A2[1]);
-    //dup2(A1_to_A2[0], STDIN_FILENO);
-    //close(A1_to_A2[0]);
-    execv ("/mnt/c/c code/build/ece650-a2", a2_argv);
-
-    // execl("/bin/ls", "ls", "-l", nullptr);
-    perror ("Error from arie");
+    
+    execv ("./ece650-a2", a2_argv);
+    perror ("Error from A2");
     return 1;
-
-    int res;// = procB();
-    for (pid_t k : kids) {
-        int status;
-        kill (k, SIGKILL);
-        waitpid(k, &status, 0);
-    }
-    std::cout << "A2 returned status: " << res << std::endl;
-
     return 0;
 }

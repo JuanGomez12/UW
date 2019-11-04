@@ -8,7 +8,6 @@
 #include <signal.h>
 #include <sys/wait.h>
 
-
 //Initialize default values for s, n, l and c
 int s = 10;
 int n = 5;
@@ -16,45 +15,46 @@ int l = 5;
 int c = 20;
 bool verbose = true;
 
-/// Entry point of process A
-int procA(void) {
-    // Process A writing to C
-    for (int i = 0; i < 100; i++)
-    {
-        std::cout << "Hi" << std::endl;
-        usleep(5000);
+unsigned int getRnd(){//Random number generator
+    //open /dev/urandom to read
+    std::ifstream urandom("/dev/urandom");
+    // check that it did not fail
+    if (urandom.fail()) {
+        std::cerr << "Error: cannot open /dev/urandom\n";
+        return 1;
     }
-    std::cout << "[A] Sleeping" << std::endl;
-    sleep(6);
-    std::cout << "[A] Exiting" << std::endl;
-    return 0;
+
+    // read a random 8-bit value.
+    // Have to use read() method for low-level reading
+    char ch = 'a';
+    urandom.read(&ch, 1);
+    // cast to integer to see the numeric value of the character
+    /*
+    if (verbose){
+        std::cout << "Random character: " << (unsigned int)ch << "\n";
+    }
+    */
+    
+    // close random stream
+    urandom.close();
+
+    return (unsigned int)ch;
 }
 
-/// Entry point of process B
-int procB(void) {
-    // Process B writing to C
-    while (!std::cin.eof()) {
-        // read a line of input until EOL and store in a string
-        std::string line;
-        std::getline(std::cin, line);
-        if (line.size () > 0)
-            std::cout << line << std::endl;
+//Function for randomly creating the names of the streets.
+//Based on the answers in: http://www.cplusplus.com/forum/windows/88843/
+static const char alphanum[] =
+"abcdefghijklmnopqrstuvwxyz";
+int stringLength = sizeof(alphanum) - 1;
+std::string genRndStrt(){
+    std::string rnd_str;
+    for(unsigned int i = 0; i < 26; ++i){
+        char c = alphanum[getRnd() % stringLength];
+        std::string s(1, c);
+        //std::cout << "character found is: " << s << std::endl;
+        rnd_str = rnd_str + s;
     }
-    std::cout << "[B] saw EOF" << std::endl;
-    return 0;
-}
-
-/// Entry point of process C
-int procC(void) {
-    // Process C reading from both A and B
-    while (!std::cin.eof()) {
-        // read a line of input until EOL and store in a string
-        std::string line;
-        std::getline(std::cin, line);
-        if (line.size () > 0)
-            std::cout << "[C]: " << line << std::endl;
-    }
-    return 0;
+    return rnd_str;
 }
 
 int main (int argc, char **argv)
@@ -105,117 +105,10 @@ int main (int argc, char **argv)
             std::cout << "Non-option argument: " << argv[index] << "\n";
     }
 
-
-
-//Forking
-    // create a pipe
-    std::vector<pid_t> kids;
-    pid_t child_pid;
-    //----------------------------------------------------------------------------------------------------------------------------------------
-    //rgen process and pipes
-    int rgen_to_A1[2];
-    pipe(rgen_to_A1);
-
-
-    /*    
-    //Construct command line arguments
-    char* rgen_argv[10];
-
-    rgen_argv[0] = (char*)"rgen";
-    rgen_argv[1] = (char*)"-s";
-    rgen_argv[2] = (char*)s;
-    rgen_argv[3] = (char*)"-n";
-    rgen_argv[4] = (char*)n;
-    rgen_argv[5] = (char*)"-l";
-    rgen_argv[6] = (char*)l;
-    rgen_argv[7] = (char*)"-c";
-    rgen_argv[8] = (char*)c;
-    rgen_argv[9] = nullptr;
-    */
-
-   char* rgen_argv[2];
-   rgen_argv[0] = (char*)"rgen";
-   rgen_argv[1] = nullptr;
-    if (verbose){
-        std::cout << "[exec] executing '/mnt/c/c code/build/rgen' using execv" << std::endl;
+    int i=0;
+    while(i < 20){
+        i++;
+        std::cout << "random street name: " << genRndStrt() << std::endl;
+        sleep(1);
     }
-
-    child_pid = fork ();
-    if (child_pid == 0) {
-        sleep (4);
-        //Configure pipes for rgen_to_A1
-        close(rgen_to_A1[0]);
-        dup2(rgen_to_A1[1], STDOUT_FILENO);
-        close(rgen_to_A1[1]);
-        execv ("/mnt/c/c code/build/rgen", rgen_argv);
-
-        // execl("/bin/ls", "ls", "-l", nullptr);
-        perror ("Error from rgen");
-        return 1;
-    }
-    else if (child_pid < 0) {
-        std::cerr << "Error: could not fork\n";
-        return 1;
-    }
-    kids.push_back(child_pid);
-    
-    //------------------------------------------------------------------------------------------------------------------------------------
-    //Assignment 1 process and pipes
-
-    int A1_to_A2[2];
-    pipe(A1_to_A2);
-
-
-    //Construct command line arguments
-    char* a1_argv[2];
-    a1_argv[0] = (char*)"ece650-a1.py";
-    a1_argv[2] = nullptr;
-    if (verbose){
-        std::cout << "[exec] executing './ece650-a1.py' using execv" << std::endl;
-    }
-    child_pid = fork ();
-    if (child_pid == 0) {
-        close(rgen_to_A1[1]);
-        dup2(rgen_to_A1[0], STDIN_FILENO);
-        close(rgen_to_A1[0]);
-        execv ("./ece650-a1.py", a1_argv);
-        perror ("Error from A1");
-        return 1;
-    }
-    kids.push_back(child_pid);
-    
-    
-
-    // execl("/bin/ls", "ls", "-l", nullptr);
-    
-    sleep(10);
-    
-    child_pid = fork ();
-    if (child_pid == 0) {//Child process
-        if (verbose){
-            std::cout << "The child processes are:" << std::endl;
-            for (int i = 0; i < kids.size(); i++){
-                std::cout << kids[i] << std::endl;
-            }
-        }
-    }
-    else if (child_pid < 0) {
-        std::cerr << "Error: could not fork\n";
-        return 1;
-    }
-    kids.push_back(child_pid);
-    int res;
-    waitpid(kid, &res, 0);
-    std::cout << "ls returned status: " << res << std::endl;
-
-    int res = 0;// = procB();
-    for (pid_t k : kids) {
-        int status;
-        kill (k, SIGKILL);
-        waitpid(k, &status, 0);
-    }
-    if (verbose){
-        std::cout << "A2 returned status: " << res << std::endl;
-    }
-    return 0;
 }

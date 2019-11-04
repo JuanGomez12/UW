@@ -8,10 +8,12 @@
 #include "graph.hpp"
 
 
-bool verboseGraph = false; //Makes the graph functions write more information to the console.
+bool verboseGraph = false; //Makes the graph functions write more information to the CLI.
 
 Graph::Graph(const int vertNum): V(vertNum), adjMat(vertNum, std::vector<int>(vertNum, 0)) {}
+
 int Graph::getV() { return V; }
+
 
 
 void Graph::setV(const int vertNum){
@@ -27,6 +29,24 @@ bool Graph::addEdge(int u, int v, int w){
         return true;
     }
     return false;
+} 
+
+std::string Graph::getEdges(){
+    std::string edges = "E {";
+    for (int i = 0; i < Graph::V; ++i){//Iterate over the rows of the matrix
+            for (int j = i + 1; j < Graph::V; ++j){//Iterate over the columns of the matrix
+                if (Graph::adjMat[i][j] > 0){
+                    std::string str_i(1, i);
+                    std::string str_j(1, j);
+                    edges = edges + "<" + str_i + "," + str_j + ">";
+                    if (j < Graph::V - 1){
+                        edges = edges + ",";
+                    }
+                }
+            }
+        } 
+    edges = edges + "}";
+    return edges;
 } 
 
 
