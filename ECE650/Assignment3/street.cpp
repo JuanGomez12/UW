@@ -10,10 +10,19 @@
 
 bool verboseStreet = false; //Makes the street functions write more information to the CLI.
 
-Street::Street(const int segmentNum): segments(segmentNum), coordMat(segmentNum, std::vector<int>(4, 0)) {}
+Street::Street(const int segmentNum, std::string streetName): segments(segmentNum), name(streetName), coordMat(segmentNum, std::vector<int>(4, 0)) {}
     
     int Street::getSegments(){
         return Street::segments;
+    }
+
+
+    void Street::setName(std::string streetName){
+        Street::name = streetName;
+    }
+    
+    std::string Street::getName(){
+        return name;
     }
 
     std::vector<int> Street::getSegmentCoords(const int segNum){
@@ -21,7 +30,14 @@ Street::Street(const int segmentNum): segments(segmentNum), coordMat(segmentNum,
         return seg;
     }
 
-    bool Street::addSegment(const int x1, const int y1, const int x2, const int y2){
+    bool Street::addSegment(const int x1, const int y1, const int x2, const int y2, const bool addStreet){
+        //Check if the segment has a total distance of 0
+        if ((x1 == x2) && (y1 == y2)){
+            if(verboseStreet){
+                std::cout << "street::addSegment: Start and finish coordinates are the same" << std::endl;
+            }
+            return false;
+        }
         //Check if it is not the first segment to be added to the street
         if (!coordMat.empty()){
             //Check if the previous coordinates correspond to the same coordinates for the next point
@@ -58,6 +74,7 @@ Street::Street(const int segmentNum): segments(segmentNum), coordMat(segmentNum,
     
     bool Street::segmentsWithinSegments(int p1, int p2, int q1, int q2){//x1, x2, x3, x4
         if ((std::min(p1, p2) <= std::min(q1, q2)) && (std::min(q1, q2) <= std::max(q1, q2)) && (std::max(q1, q2) <= std::max(p1, p2))){
+
             if (verboseStreet){
                 std::cout << "segment contained within other segment: ";
                 std::cout << std::min(p1, p2) << " <= " << std::min(q1, q2) << " <= " << std::max(q1, q2) << " <= " << std::max(p1, p2) << std::endl;
@@ -77,7 +94,7 @@ Street::Street(const int segmentNum): segments(segmentNum), coordMat(segmentNum,
         else{
             streetSegments = Street::segments - 1;
         }
-        //Check all segments except the last one (contigous one)
+        //Check all segments except the last one (contigous one) if checkAll is false
         for (int i = 0; i < streetSegments; ++i){
             if (verboseStreet){
                 std::cout << "checkIntersect: checking segment " << i << std::endl;
@@ -122,10 +139,24 @@ Street::Street(const int segmentNum): segments(segmentNum), coordMat(segmentNum,
     }
 
     void Street::printSegments(){
-        std::cout << "printing segments:" << std::endl;
         for (int i = 0; i < Street::segments; ++i){
             std::cout << "segment " << i << ": (" << coordMat[i][0] << "," << coordMat[i][1] << ") ---> (";
             std::cout << coordMat[i][2] << "," << coordMat[i][3] << ")" << std::endl;
         }
         //std::cout << "done printing street segments" << std::endl;
+    }
+
+    std::string Street::getSegmentsString(){
+        std::string streetString;
+        for (int i = 0; i < segments; ++i){
+            std::vector<int> coords = coordMat.at(i);
+            if (i != 0){
+                streetString = streetString + "(" + std::to_string(coords.at(2)) + "," + std::to_string(coords.at(3)) + ")";
+            }
+            else{
+                streetString = "(" + std::to_string(coords.at(0)) + "," + std::to_string(coords.at(1)) + ")";
+                streetString = streetString + "(" + std::to_string(coords.at(2)) + "," + std::to_string(coords.at(3)) + ")";
+            }
+        }
+        return streetString;
     }

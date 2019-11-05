@@ -16,10 +16,8 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/run)
 add_executable(ece650-a2 ece650-a2.cpp parser.cpp graph.cpp)
 add_executable(rgen rgen.cpp street.cpp)
 add_executable(ece650-a3 driver.cpp)
-add_executable(ece650-a3-test driverTest.cpp)
-add_executable(a1runtest a1run_test.cpp)
 
 # create the executable for tests
 add_executable(tests test.cpp)
 install(PROGRAMS ece650-a1.py DESTINATION bin)
-install(TARGETS rgen ece650-a2 ece650-a3 ece650-a3-test a1runtest RUNTIME DESTINATION bin)
+install(TARGETS rgen ece650-a2 ece650-a3 RUNTIME DESTINATION bin)

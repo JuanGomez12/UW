@@ -476,7 +476,7 @@ def main():
             checkLine(line)
         if verbose:
             print("[A1]: Saw EOF")
-        sys.stderr.write("[A1]: Saw EOF")
+        #sys.stderr.write("[A1]: Saw EOF")
         sys.exit(0)
 
     # return exit code 0 on successful termination

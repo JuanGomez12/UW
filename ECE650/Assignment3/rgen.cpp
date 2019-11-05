@@ -14,8 +14,8 @@ int s = 10;
 int n = 5;
 int l = 5;
 int c = 20;
-int num_tries = 25; //number of tries each creation of the street will have
-bool verbose = true;
+int num_tries = 30; //number of tries each creation of the street will have
+bool verbose = false;
 
 
 int getRnd(){//Random number generator
@@ -63,7 +63,8 @@ std::string genRndStrt(){
     return rnd_str;
 }
 
-bool buildStreets(int s_val, int n_val, int c_val){
+std::vector<Street> buildStreets(int s_val, int n_val, int c_val){
+//bool buildStreets(int s_val, int n_val, int c_val){
     //First obtain the specifications of the streets:
     //Number of streets for the current specification:
     int strt_num = getRnd() % s_val;
@@ -89,7 +90,7 @@ bool buildStreets(int s_val, int n_val, int c_val){
 
         strt_names.push_back(strt_name);
         //Create a street object
-        Street street(0);
+        Street street(0, strt_name);
         //Find how many segments the street will have
         int street_segments = getRnd() % (n_val + 1);
         if (street_segments < 1){
@@ -112,30 +113,39 @@ bool buildStreets(int s_val, int n_val, int c_val){
                 }
                 int x2 = getRnd() % (coords + 1);
                 int y2 = getRnd() % (coords + 1);
-                if (street.addSegment(x1, y1, x2, y2)){
-                    segment_added = true;
-                    for (int m = 0; m < streets.size(); ++m){//Check if there is an intersection with another previously built street
-                       Street street2 = streets.at(m);
-                        for (int n = 0; n < street2.getSegments(); ++n){//Traverse the segments of one of the streets and look for an intersection
-                            std::vector<int> prev_coords = street2.getSegmentCoords(n);
-                            int x3 = prev_coords.at(0);
-                            int y3 = prev_coords.at(1);
-                            int x4 = prev_coords.at(2);
-                            int y4 = prev_coords.at(3);
-                            if (street.checkIntersect(x3, y3, x4, y4, true) && !intersection_detected){//If an intersection is found between two streets, modify the boolean
-                                intersection_detected = true;
-                                if (verbose){
-                                std::cout << "Intersection between streets found!" << std::endl;
+                if (street.addSegment(x1, y1, x2, y2, false)){//The segment is compatible with the rest of segments of the street
+                    if ((!intersection_detected) && (i > 0)){//Check if there is already an intersection between a pair of streets
+                        for (unsigned int m = 0; m < streets.size(); ++m){//Check if there is an intersection with another previously built street
+                            Street street2 = streets.at(m);
+                            for (int n = 0; n < street2.getSegments(); ++n){//Traverse the segments of one of the streets and look for an intersection
+                                std::vector<int> prev_coords = street2.getSegmentCoords(n);
+                                int x3 = prev_coords.at(0);
+                                int y3 = prev_coords.at(1);
+                                int x4 = prev_coords.at(2);
+                                int y4 = prev_coords.at(3);
+                                if (street.checkIntersect(x3, y3, x4, y4, true)){//If an intersection is found between two streets add the street, if not try again
+                                    intersection_detected = true;
+                                    segment_added = true;
+                                    street.addSegment(x1, y1, x2, y2, true);
+                                    if (verbose){
+                                        std::cout << "Intersection between streets found, between points: (" << x1 << "," << y1 << ") ("<< x2 << "," << y2;
+                                        std::cout << ") and (" << x3 << "," << y3 << ") ("<< x4 << "," << y4 << ")" << std::endl;
+                                    }
                                 }
                             }
-                        } 
+                        }
                     }
-                    break;
+                    else{//Its not the last segment of the last street and there is already an intersection, the segment can be added without any trouble
+                        segment_added = true;
+                        street.addSegment(x1, y1, x2, y2, true);
+                    }
+                    break; //break out of the k loop
                 }
             }
             if (!segment_added){//Segment could not be added after num_tries attempts, show error
                 std::cerr << "Error: Failed to generate valid input after " << num_tries << " attempts." << std::endl;
-                return false;
+                streets.clear();
+                return streets;
             }
         }
         if (verbose){
@@ -143,18 +153,29 @@ bool buildStreets(int s_val, int n_val, int c_val){
         }
         streets.push_back(street);
     }
-    //Create the next street
-    return true;
+    //output the street commands
+    //wait
+    //delete the streets
+    return streets;
+}
+
+void printStreets(std::vector<Street> streets){//Function to add the streets using the a command for A1
+    for(unsigned int i = 0; i < streets.size(); ++i){
+        Street street = streets.at(i);
+        std::cout << "a \"" << street.getName() << "\" "  << street.getSegmentsString() << std::endl;
+    }
+    std::cout << "g" << std::endl;
+}
+
+void deleteStreets(std::vector<Street> streets){//Function to remove the streets using the r command for A1
+    for(unsigned int i = 0; i < streets.size(); ++i){
+        Street street = streets.at(i);
+        std::cout << "r \"" << street.getName() << "\"" << std::endl;
+    }
 }
 
 int main (int argc, char **argv)
 {
-    std::ofstream outputFile;
-    if (verbose){
-        outputFile.open("rgenData.txt");
-        outputFile << "rgen started" << std::endl;
-        
-    }
 
     std::string s_value;
     std::string n_value;
@@ -188,7 +209,7 @@ int main (int argc, char **argv)
             }
 
     if (verbose){
-        outputFile << "s = " << s << ", "
+        std::cout << "s = " << s << ", "
                 << "n = " << n << ", "
                 << "l = " << l << ", "
                 << "c = " << c << std::endl;
@@ -202,52 +223,28 @@ int main (int argc, char **argv)
             std::cout << "Non-option argument: " << argv[index] << "\n";
     }
 
-
-    int tried = 0;
-    while (tried < 3){//Write code that creates the streets
-        if (!buildStreets(s, n, c)){
-            tried = tried+1;
+    bool keepRunning = true;
+    while(keepRunning){
+        std::vector<Street> streets;
+        streets = buildStreets(s, n, c);
+        if (!streets.empty()){
+            printStreets(streets);
+            int sleep_time = getRnd() % (l + 1);
+            if (sleep_time < 5){
+                sleep_time = 5;
+            }
+            sleep(sleep_time);
+            deleteStreets(streets);
+            if (verbose){
+                std::cout << "---------------------- STREET CREATED SUCCESSFULLY ----------------------" << std::endl;
+            }
         }
         else{
-            std::cout << "----------------------STREET BUILT SUCCESFULLY----------------------" << std::endl;
+            keepRunning = false;
         }
-
-    }
-    
-    
-    
-    //while(getppid()!= 1) {
-    /*
-    while (!std::cin.eof()) {
-        
-        std::string line;
-        std::getline(std::cin, line);
-        std::cerr << "[rgen]: Read: " << line << std::endl;
-        */
-    while(false){
-    //while(!std::cin.eof()){
-        std::cout << "a \"vertical Street\" (20,20)(20,30)"<< std::endl;
-        std::cout << "a \"Horizontal Street\" (19,25)(29,25)"<< std::endl;
-        std::cout << "g"<< std::endl;
-        if (verbose){
-            outputFile << "printed streets and asked for graph" << std::endl;
-        }
-        sleep(3);
-        std::cout << "r \"vertical Street\"" << std::endl;
-        std::cout << "r \"Horizontal Street\"" << std::endl;
-        if (verbose){
-            outputFile << "deleted streets" << std::endl;
-        }
-        sleep(2);
-        
     }
     if (verbose){
-            std::cerr << "[rgen]: Received EOF" << std::endl;
-            outputFile << "[rgen]: received EOF" << std::endl;
-            outputFile.close();
+            std::cout << "[rgen]: Received EOF" << std::endl;
         }
-/*
-// 
-    */
     return 0;
 }

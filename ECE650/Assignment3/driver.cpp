@@ -14,7 +14,7 @@ int s = 10;
 int n = 5;
 int l = 5;
 int c = 20;
-bool verbose = true;
+bool verbose = false;
 
 
 int main (int argc, char **argv)
@@ -72,8 +72,8 @@ int main (int argc, char **argv)
     std::vector<pid_t> running_proc;
     pid_t child_pid;
 
-    int rgen_input[2];
-    pipe(rgen_input);
+    //int rgen_input[2];
+    //pipe(rgen_input);
 
     int A1_input[2];
     pipe(A1_input);
@@ -89,13 +89,13 @@ int main (int argc, char **argv)
     a1_argv[0] = (char*)"ece650-a1.py";
     a1_argv[1] = nullptr;
     if (verbose){
-        std::cout << "[exec] executing './ece650-a1.py' using execv" << std::endl;
+        std::cout << "[A3] executing './ece650-a1.py' using execv" << std::endl;
     }
     child_pid = fork ();
     if (child_pid == 0) {
         //Close rgen_input pipes
-        close(rgen_input[1]);
-        close(rgen_input[0]);
+        //close(rgen_input[1]);
+        //close(rgen_input[0]);
         //Configure rgen to A1 pipes
         dup2(A1_input[0], STDIN_FILENO);
         close(A1_input[1]);
@@ -122,36 +122,52 @@ int main (int argc, char **argv)
 
     
     //Construct command line arguments
-    /*
+    
     char* rgen_argv[10];
+
+    //Based on answer found in https://stackoverflow.com/a/3446272.
+    //Configure the buffers
+    char sprintf_buffer1[20];
+    char sprintf_buffer2[20];
+    char sprintf_buffer3[20];
+    char sprintf_buffer4[20];
+    sprintf (sprintf_buffer1, "%d", s);
+    sprintf (sprintf_buffer2, "%d", n);
+    sprintf (sprintf_buffer3, "%d", l);
+    sprintf (sprintf_buffer4, "%d", c);
+    
 
     rgen_argv[0] = (char*)"rgen";
     rgen_argv[1] = (char*)"-s";
-    rgen_argv[2] = (char*)s;
+    rgen_argv[2] = sprintf_buffer1;
     rgen_argv[3] = (char*)"-n";
-    rgen_argv[4] = (char*)n;
+    rgen_argv[4] = sprintf_buffer2;
     rgen_argv[5] = (char*)"-l";
-    rgen_argv[6] = (char*)l;
+    rgen_argv[6] = sprintf_buffer3;
     rgen_argv[7] = (char*)"-c";
-    rgen_argv[8] = (char*)c;
+    rgen_argv[8] = sprintf_buffer4;
     rgen_argv[9] = nullptr;
-    */
+    
     ///*
-   char* rgen_argv[2];
-   rgen_argv[0] = (char*)"rgen";
-   rgen_argv[1] = nullptr;
+    /*
+
+    */
+
+    // char* rgen_argv[2];
+    // rgen_argv[0] = (char*)"rgen";
+    // rgen_argv[1] = nullptr;
    //*/
     if (verbose){
-        std::cout << "[exec] executing './rgen' using execv" << std::endl;
+        std::cout << "[A3] executing './rgen' using execv" << std::endl;
     }
 
     child_pid = fork ();
     if (child_pid == 0) {
         //sleep (4);
         //Configure pipes for rgen input
-        dup2(rgen_input[0], STDIN_FILENO);
-        close(rgen_input[1]);
-        close(rgen_input[0]);
+        //dup2(rgen_input[0], STDIN_FILENO);
+        //close(rgen_input[1]);
+        //close(rgen_input[0]);
         //Configure pipes for A1_input
         dup2(A1_input[1], STDOUT_FILENO);
         close(A1_input[0]);
@@ -179,9 +195,9 @@ int main (int argc, char **argv)
     child_pid = fork ();
     if (child_pid == 0) {//run input controller
         //Configure rgen pipe
-        dup2(rgen_input[1], STDOUT_FILENO);
-        close(rgen_input[0]);
-        close(rgen_input[1]);
+        //dup2(rgen_input[1], STDOUT_FILENO);
+        //close(rgen_input[0]);
+        //close(rgen_input[1]);
         //Configure A2 pipe
         dup2(A2_input[1], STDOUT_FILENO);
         close(A2_input[0]);
@@ -205,9 +221,9 @@ int main (int argc, char **argv)
         //running_proc.push_back(parent_pid);
         //sleep(10);
         for (pid_t k : running_proc) {
-        int status;
-        kill (k, SIGTERM);
-        waitpid(k, &status, 0);
+            int status;
+            kill (k, SIGTERM);
+            waitpid(k, &status, 0);
         }
         return 0;
     }
@@ -218,8 +234,8 @@ int main (int argc, char **argv)
     //A2 process
     //First configure the pipes
     //Configure pipes from A2 to rgen
-    close(rgen_input[1]);
-    close(rgen_input[0]);
+    //close(rgen_input[1]);
+    //close(rgen_input[0]);
 
     //Close the A1 input pipes
     close(A1_input[1]);
@@ -234,7 +250,7 @@ int main (int argc, char **argv)
     a2_argv[0] = (char*)"ece650-a2";
     a2_argv[1] = nullptr;
     if (verbose){
-        std::cout << "[exec] executing './ece650-a2' using execv" << std::endl;
+        std::cout << "[A3] executing './ece650-a2' using execv" << std::endl;
     }
     
     execv ("./ece650-a2", a2_argv);

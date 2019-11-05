@@ -11,6 +11,7 @@
 bool parse_line (const std::string &line,
                  char &cmd, int &argnum, std::vector<int> &numVec, std::string &err_msg) {
 
+    std::string favLine = line;
     std::istringstream input(line);
 
     //Remove whitespace
