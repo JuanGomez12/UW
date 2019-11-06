@@ -364,12 +364,8 @@ into the required printing format
 
     intersectionDetection()
     vertices, edges = graphConstruction()
-    if len(vertices) > 0:
-        verticesNumber = int(max(vertices.values())) + 1 
-    else:
-        verticesNumber = 0
 
-    print("V " + str(verticesNumber)) #A3 way of printing the results
+    print("V " + str(len(vertices))) #A3 way of printing the results
     
     edgeString = "E {"
     totalEdges = len(edges)

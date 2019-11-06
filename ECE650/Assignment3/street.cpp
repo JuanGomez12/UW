@@ -26,8 +26,8 @@ Street::Street(const int segmentNum, std::string streetName): segments(segmentNu
     }
 
     std::vector<int> Street::getSegmentCoords(const int segNum){
-        std::vector<int> seg = coordMat.at(segNum);
-        return seg;
+        std::vector<int> previous_segment = coordMat.at(segNum);
+        return previous_segment;
     }
 
     bool Street::addSegment(const int x1, const int y1, const int x2, const int y2, const bool addStreet){
@@ -41,11 +41,11 @@ Street::Street(const int segmentNum, std::string streetName): segments(segmentNu
         //Check if it is not the first segment to be added to the street
         if (!coordMat.empty()){
             //Check if the previous coordinates correspond to the same coordinates for the next point
-            std::vector<int> seg = coordMat.back();
-            if (seg.at(2) != x1 && seg.at(3) != y1){
+            std::vector<int> previous_segment = coordMat.back();
+            if (previous_segment.at(2) != x1 && previous_segment.at(3) != y1){
                 //The segment that was tried to introduce does not share coordinates with the past segment
                 if (verboseStreet){
-                    std::cout << "segment that was tried to introduce does not share coordinates with past: x3, y3 != x1, y1:"<< seg[2] << seg[3] << x1 << y1 << std::endl;
+                    std::cout << "segment that was tried to introduce does not share coordinates with past: x3, y3 != x1, y1:"<< previous_segment[2] << previous_segment[3] << x1 << y1 << std::endl;
                 }
                 return false;
             }
@@ -58,11 +58,15 @@ Street::Street(const int segmentNum, std::string streetName): segments(segmentNu
             }
         }
         //Does not intersect with other segments, then can be added
-        std::vector<int> newSeg;
-        newSeg.push_back(x1);
-        newSeg.push_back(y1);
-        newSeg.push_back(x2);
-        newSeg.push_back(y2);
+        std::vector<int> newSeg(4,0);
+        newSeg.at(0) = x1;
+        newSeg.at(1) = y1;
+        newSeg.at(2) = x2;
+        newSeg.at(3) = y2;
+        //newSeg.push_back(x1);
+        //newSeg.push_back(y1);
+        //newSeg.push_back(x2);
+        //newSeg.push_back(y2);
         coordMat.push_back(newSeg);
 
         Street::segments = Street::segments + 1;
@@ -99,40 +103,45 @@ Street::Street(const int segmentNum, std::string streetName): segments(segmentNu
             if (verboseStreet){
                 std::cout << "checkIntersect: checking segment " << i << std::endl;
             }
-            std::vector<int> seg = coordMat.at(i);
-    	    int x1 = seg[0];
-            int y1 = seg[1];
-            int x2 = seg[2];
-            int y2 = seg[3];
-            float denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+            std::vector<int> previous_segment = coordMat.at(i);
+    	    int x1 = previous_segment[0];
+            int y1 = previous_segment[1];
+            int x2 = previous_segment[2];
+            int y2 = previous_segment[3];
+            double denominator = ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4));
                     if (denominator != 0){  // Check if they are parallel
-                        float t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
-                        float u = - ((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denominator;
-                        if ((0 <= t) && (t <= 1) && (0 <= u) && (u <= 1)){
+                        double t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
+                        double u = ((-1) * ((x1 - x2) * (y1 - y3)) - (y1 - y2) * (x1 - x3)) / denominator;
+                        if (((0 <= t) && (t <= 1)) && ((0 <= u) && (u <= 1))){
                             // there is an intersection between the points
+                            //std::cerr << "Found intersection with t, u formula" <<std::endl;
                             return true;
                         }
                     }
                     else if(Street::segmentsWithinSegments(x1, x2, x3, x4) && Street::segmentsWithinSegments(y1, y2, y3, y4)){//Segments contain themselves
+                        //std::cerr << "Found intersection with segmentsWithinSegments first formula" <<std::endl;
                         return true;
                     }
                     else if(Street::segmentsWithinSegments(x3, x4, x1, x2) && Street::segmentsWithinSegments(y3, y4, y1, y2)){
+                        //std::cerr << "Found intersection with segmentsWithinSegments second formula" <<std::endl;
                         return true;
                     }
         }
-        //Now check the previous segment
-        if (!coordMat.empty()){
-            std::vector<int> seg = coordMat.back();
-            int x1 = seg[0];
-            int y1 = seg[1];
-            int x2 = seg[2];
-            int y2 = seg[3];
-            //Check if new segment is contained within the past one
-            if(Street::segmentsWithinSegments(x1, x2, x3, x4) && Street::segmentsWithinSegments(y1, y2, y3, y4)){
-                        return true;
-            }
-            else if(Street::segmentsWithinSegments(x3, x4, x1, x2) && Street::segmentsWithinSegments(y3, y4, y1, y2)){
-                        return true;
+        if (!checkAll){
+            //Now check the previous segment
+            if (!coordMat.empty()){
+                std::vector<int> previous_segment = coordMat.back();
+                int x1 = previous_segment[0];
+                int y1 = previous_segment[1];
+                int x2 = previous_segment[2];
+                int y2 = previous_segment[3];
+                //Check if new segment is contained within the past one
+                if(Street::segmentsWithinSegments(x1, x2, x3, x4) && Street::segmentsWithinSegments(y1, y2, y3, y4)){
+                            return true;
+                }
+                else if(Street::segmentsWithinSegments(x3, x4, x1, x2) && Street::segmentsWithinSegments(y3, y4, y1, y2)){
+                            return true;
+                }
             }
         }
         return false;
