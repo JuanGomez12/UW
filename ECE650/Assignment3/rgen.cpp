@@ -88,74 +88,64 @@ std::vector<Street> buildStreets(int s_val, int n_val, int c_val){
             std::cout<< "Creating street: " << strt_name << ", street number: " << i << std::endl;
         }
 
-        strt_names.push_back(strt_name);
+        //strt_names.push_back(strt_name);
         //Create a street object
-        Street street(0, strt_name);
+        Street street(strt_name);
         //Find how many segments the street will have
         int street_segments = getRnd() % (n_val + 1);
         if (street_segments < 1){
             street_segments = 1;
         }
         //Create the street segments
-        for (int j = 0; j < street_segments; ++j){
+        //Add the first segment
+        street.addCoord(getRnd() % (coords + 1), getRnd() % (coords + 1));
+        //Create the rest of the segments
+        for (int j = 1; j <= street_segments; ++j){
             bool segment_added = false;
             for (int k = 0; k < num_tries; ++k){
-                int x1;
-                int y1;
-                if (j == 0){//First coordinate of the first segment
-                    x1 = getRnd() % (coords + 1);
-                    y1 = getRnd() % (coords + 1);
-                }
-                else{//Get the coordinates of the previous segment
-                    std::vector<int> prev_coords = street.getSegmentCoords(j - 1);
-                    x1 = prev_coords.at(2);
-                    y1 = prev_coords.at(3);
-                }
-                int x2 = getRnd() % (coords + 1);
-                int y2 = getRnd() % (coords + 1);
-                if (street.addSegment(x1, y1, x2, y2, false)){//The segment is compatible with the rest of segments of the street
-                    if (!intersection_detected){
-                        if (j == street_segments - 1 && i > 0){//Last segment of the second street onward
-                            for (unsigned int m = 0; m < streets.size(); m++){//Traverse all the previous streets
-                                Street prev_street = streets.at(m);
-                                int prev_street_segments = prev_street.getSegments();
-                                for (int n = 0; n < prev_street_segments; ++n){//Traverse each of the previous street's segments
-                                    std::vector<int> prev_coords = prev_street.getSegmentCoords(n); // Get the previous streets coords
-                                    int x3 = prev_coords.at(0);
-                                    int y3 = prev_coords.at(1);
-                                    int x4 = prev_coords.at(2);
-                                    int y4 = prev_coords.at(3);
-                                    if (street.checkIntersect(x3, y3, x4, y4, true)){//Check if the prev street's segment's coords intersect the new street's
-                                        //If they do intersect, add street and mark the bool as true
-                                        intersection_detected = true;
-                                        segment_added = true;
-                                        street.addSegment(x1, y1, x2, y2, true);
-                                        break;
-                                        if (verbose){
-                                            std::cout << "Intersection between streets found, between points: (" << x1 << "," << y1 << ") ("<< x2 << "," << y2;
-                                            std::cout << ") and (" << x3 << "," << y3 << ") ("<< x4 << "," << y4 << ")" << std::endl;
-                                        }
-                                    }
-                                    else{
-                                        //If they don't, try with a new segment
-                                        continue;
-                                    }
-                                }
+                int x1 = getRnd() % (coords + 1);
+                int y1 = getRnd() % (coords + 1);
+                if (!intersection_detected){//Is there already an intersection in the graph?
+                    //Get the previous points of the street to form the segment
+                    // std::cerr << "Getting past coordinates " << j << " of a total of " << street_segments << std::endl;
+                    std::vector<int> prev_coord = street.getCoords(j - 1);
+                    int x_prev = prev_coord.at(0);
+                    int y_prev = prev_coord.at(1);
+                    for (int m = 0 ; m < i; ++m){//If there are no streets created already (its first street)
+                        Street prev_street = streets.at(m);
+                        if (prev_street.checkIntersect(x_prev, y_prev, x1, y1)){
+                            
+                            if (street.addCoord(x1, y1)){
+                                segment_added = true;
+                                intersection_detected = true;
+                                break;
                             }
                         }
-                        else{//Not the last segment of the second road onward
-                            street.addSegment(x1, y1, x2, y2, true);
-                            segment_added = true;
-                            break; //break out of the k loop
+                        else{//There is no intersection
+                            if ((i != strt_num - 1) && (j != street_segments)){//Check if it is not the last segment of the last street
+                                if (street.addCoord(x1, y1)){
+                                    segment_added = true;
+                                    break;
+                                }
+                            }
+                            else{
+                                //Ultimo punto de ultima calle y no hay interseccion hasta ahora
+                            }
                         }
                     }
-                    else{
-                        //Already found an intersection in the graph, add the street
-                        street.addSegment(x1, y1, x2, y2, true);
-                        segment_added = true;
-                        break; //break out of the k loop
+                    if (i == 0){//Check if it is the first street
+                        // std::cerr << "Adding new coordinate to street" << std::endl;
+                        if (street.addCoord(x1, y1)){
+                            segment_added = true;
+                            break;
+                        }
                     }
-                    
+                }
+                else{
+                    if (street.addCoord(x1, y1)){
+                        segment_added = true;
+                        break;
+                    }
                 }
             }
             if (!segment_added){//Segment could not be added after num_tries attempts, show error
@@ -175,19 +165,18 @@ std::vector<Street> buildStreets(int s_val, int n_val, int c_val){
 void printStreets(std::vector<Street> streets){//Function to add the streets using the a command for A1
     for(unsigned int i = 0; i < streets.size(); ++i){
         Street street = streets.at(i);
+        std::cerr << "a \"" << street.getName() << "\" "  << street.getSegmentsString() << std::endl;
         std::cout << "a \"" << street.getName() << "\" "  << street.getSegmentsString() << std::endl;
-        //std::cerr << "a \"" << street.getName() << "\" "  << street.getSegmentsString() << std::endl;
     }
+    std::cerr << "g" << std::endl;
     std::cout << "g" << std::endl;
-    //std::cerr << "g" << std::endl;
-
 }
 
 void deleteStreets(std::vector<Street> streets){//Function to remove the streets using the r command for A1
     for(unsigned int i = 0; i < streets.size(); ++i){
         Street street = streets.at(i);
+        std::cerr << "r \"" << street.getName() << "\"" << std::endl;
         std::cout << "r \"" << street.getName() << "\"" << std::endl;
-        //std::cerr << "r \"" << street.getName() << "\"" << std::endl;
     }
 }
 
@@ -243,8 +232,8 @@ int main (int argc, char **argv)
     
 
 
-    bool keepRunning = false;
-    while(keepRunning){
+    bool keepRunning = true;
+    while(true){
         std::vector<Street> streets;
         streets = buildStreets(s, n, c);
         if (!streets.empty()){
