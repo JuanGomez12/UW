@@ -147,8 +147,8 @@ int main(int argc, char** argv) {
             //edges_selected = false;
         }
     }
-    //if (verbose){
+    if (verbose){
         std::cout << "[A2]: Saw EOF" << std::endl;
-    //}
+    }
     return 0; //Return 0 after EOF
 }

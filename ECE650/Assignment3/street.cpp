@@ -1,8 +1,6 @@
 /** Graph class file **/
 
-#include <climits>
 #include <iostream>
-#include <list>
 #include <vector>
 
 #include "street.hpp"
@@ -39,7 +37,7 @@ Street::Street(std::string streetName): totalCoords(0), name(streetName) {}
             for (int i = 0; i < Street::totalCoords; ++i){
                 if ((x1 == Street::coordVec.at(i).at(0)) && (y1 == Street::coordVec.at(i).at(1))){
                     if(verboseStreet){
-                        std::cout << "[street::addCoord] Pair of coordinates already exists in street" << std::endl;
+                        std::cerr << "[street::addCoord] Pair of coordinates already exists in street" << std::endl;
                     }
                     return false;
                 }    
@@ -51,7 +49,7 @@ Street::Street(std::string streetName): totalCoords(0), name(streetName) {}
             if (Street::checkCollisions(x1, y1)){
                 //There was a collision
                 if(verboseStreet){
-                    std::cout << "street::addSegment: segment intersected others, could not be added" << std::endl;
+                    std::cerr << "[street::addCoord] segment intersected others, could not be added" << std::endl;
                 }
                 return false;  
             }
@@ -72,8 +70,7 @@ Street::Street(std::string streetName): totalCoords(0), name(streetName) {}
         if ((std::min(p1, p2) <= std::min(q1, q2)) && (std::min(q1, q2) <= std::max(q1, q2)) && (std::max(q1, q2) <= std::max(p1, p2))){
 
             if (verboseStreet){
-                std::cout << "segment contained within other segment: ";
-                std::cout << std::min(p1, p2) << " <= " << std::min(q1, q2) << " <= " << std::max(q1, q2) << " <= " << std::max(p1, p2) << std::endl;
+                std::cerr << std::min(p1, p2) << " <= " << std::min(q1, q2) << " <= " << std::max(q1, q2) << " <= " << std::max(p1, p2) << std::endl;
             }
             return true;
         }
@@ -82,37 +79,31 @@ Street::Street(std::string streetName): totalCoords(0), name(streetName) {}
     return false;
     }
 
-  
-    bool Street::checkCollisions(const int x4, const int y4){
-        int x1, y1, x2, y2, x3, y3;
-        //First check if there is at least one segment in the street
-        if (Street::totalCoords > 1){
-            //Check if there is any overlap between this segment and the previous one
-            // std::cerr << "[Street::checkCollisions] Setting the previous coords" << std::endl;
-            // std::cerr << "[Street::addCoord] Total number of coords is " << Street::totalCoords << std::endl;
-            x1 = Street::coordVec.at(Street::totalCoords - 2).at(0);
-            y1 = Street::coordVec.at(Street::totalCoords - 2).at(1); 
-            x2 = Street::coordVec.at(Street::totalCoords - 1).at(0);
-            y2 = Street::coordVec.at(Street::totalCoords - 1).at(1);
-            x3 = x2;
-            y3 = y2;
-            //std::cerr << "[Street::checkCollisions] Previous coords set" << std::endl;
-            if(Street::segmentsWithinSegments(x1, x2, x3, x4) && Street::segmentsWithinSegments(y1, y2, y3, y4)){//Segments contain themselves
-                return true;
-            }
-            else if(Street::segmentsWithinSegments(x3, x4, x1, x2) && Street::segmentsWithinSegments(y3, y4, y1, y2)){
+    bool Street::pointWithinSegment(int x, int y, int s_x1, int s_y1, int s_x2, int s_y2){
+        //Check if the x coordinates are contained
+        if ((std::min(s_x1, s_x2) <= x) && (x <= std::max(s_x1, s_x2))){
+            //Check if the y cooridnates are contained
+            if((std::min(s_y1, s_y2) <= y) && (y <= std::max(s_y1, s_y2))){
                 return true;
             }
         }
+        return false;
+    }
+
+  
+    bool Street::checkCollisions(const int x4, const int y4){
+        int x1, y1, x2, y2, x3, y3;
         //Check if there is any intersection between this segment and the previous one
-        for (int i = 1; i < Street::totalCoords - 1; ++i){//Iterate over all of the totalCoords
+        x3 = Street::coordVec.at(Street::totalCoords - 1).at(0);
+        y3 = Street::coordVec.at(Street::totalCoords - 1).at(1);
+        for (int i = 1; i < Street::totalCoords - 1; ++i){//Iterate over all of the totalCoords except the last one
             //std::cerr << "[Street::addCoord] Checking intersection between coords" << std::endl;
             x1 = Street::coordVec.at(i - 1).at(0);
             y1 = Street::coordVec.at(i - 1).at(1); 
             x2 = Street::coordVec.at(i).at(0);
             y2 = Street::coordVec.at(i).at(1);
-            x3 = x2;
-            y3 = y2;
+            // x3 = x2;
+            // y3 = y2;
             float denominator = ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4));
             if (denominator != 0){  // Check if they are parallel
                 float t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
@@ -128,6 +119,52 @@ Street::Street(std::string streetName): totalCoords(0), name(streetName) {}
                 }
             }
         }
+         //Now check if there is at least one segment in the street
+        if ((Street::totalCoords > 1)){
+            //Check if there is any overlap between this segment and the previous one
+            // std::cerr << "[Street::checkCollisions] Setting the previous coords" << std::endl;
+            // std::cerr << "[Street::addCoord] Total number of coords is " << Street::totalCoords << std::endl;
+            x1 = Street::coordVec.at(Street::totalCoords - 2).at(0);
+            y1 = Street::coordVec.at(Street::totalCoords - 2).at(1); 
+            x2 = Street::coordVec.at(Street::totalCoords - 1).at(0);
+            y2 = Street::coordVec.at(Street::totalCoords - 1).at(1);
+            x3 = x2;
+            y3 = y2;
+
+            if (verboseStreet){
+                std::cerr << "Segments: " << x1 << ", " << y1 << " --> " << x2 << ", " << y2;
+                std::cerr << " to " << x3 << ", " << y3 << " --> " << x4 << ", " << y4 << std::endl;
+            }
+            float denominator = ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4));
+            if (denominator == 0){  // Check if they are parallel
+                //check if new point is within previous segment or if previous point is within new segment
+                if(Street::pointWithinSegment(x4, y4, x1, y1, x2, y2)){
+                    if (verboseStreet){
+                        std::cerr << "New point within previous segment" << std::endl; 
+                    }
+                    return true;
+                }
+                //Check if new segment contains the previous point
+                if(Street::pointWithinSegment(x1, y1, x2, y2, x4, y4)){
+                if (verboseStreet){
+                        std::cerr << "Previous point within new segment" << std::endl; 
+                    }
+                    return true; 
+                }
+            }
+            
+            
+
+            // std::cerr << "Segments: " << x1 << ", " << y1 << " --> " << x2 << ", " << y2 <<  " to " << x3 << ", " << y3 << " --> " << x4 << ", " << y4 << std::endl;
+            // if(Street::segmentsWithinSegments(x1, x2, x3, x4) && Street::segmentsWithinSegments(y1, y2, y3, y4)){//Segments contain themselves
+            //     std::cerr << "Segments contained within other segment using formula 1";
+            //     return true;
+            // }
+            // else if(Street::segmentsWithinSegments(x3, x4, x1, x2) && Street::segmentsWithinSegments(y3, y4, y1, y2)){
+            //     std::cerr << "Segments contained within other segment using formula 2";
+            //     return true;
+            // }
+        }
         //There are not previous totalCoords, so there are no collisions
         return false;
     }
@@ -137,7 +174,7 @@ Street::Street(std::string streetName): totalCoords(0), name(streetName) {}
         int streetSegments = totalCoords - 1; //Number of segments on the street
         for (int i = 0; i < streetSegments; ++i){//Iterate over all the segments
             if (verboseStreet){
-                std::cout << "checkIntersect: checking segment " << i << std::endl;
+                std::cerr << "checkIntersect: checking segment " << i << std::endl;
             }
             int x1 = Street::coordVec.at(i).at(0);
             int y1 = Street::coordVec.at(i).at(1); 
@@ -163,10 +200,10 @@ Street::Street(std::string streetName): totalCoords(0), name(streetName) {}
 
     void Street::printSegments(){
         for (int i = 0; i < Street::totalCoords; ++i){
-            std::cout << "segment " << i << ": (" << coordVec[i][0] << "," << coordVec[i][1] << ") ---> (";
-            std::cout << coordVec[i + 1][2] << "," << coordVec[i + 1][3] << ")" << std::endl;
+            std::cerr << "segment " << i << ": (" << coordVec[i][0] << "," << coordVec[i][1] << ") ---> (";
+            std::cerr << coordVec[i + 1][2] << "," << coordVec[i + 1][3] << ")" << std::endl;
         }
-        //std::cout << "done printing street totalCoords" << std::endl;
+        //std::cerr << "done printing street totalCoords" << std::endl;
     }
 
     std::string Street::getSegmentsString(){

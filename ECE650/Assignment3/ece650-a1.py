@@ -214,7 +214,7 @@ def intersectionDetection():
                             street1.lines[j].intersections[intersectionString] = [xIntersection, yIntersection]
                             street2.lines[l].intersections[intersectionString] = [xIntersection, yIntersection]
 
-                    else:
+                    else: #They are not parallel
 
                         # Special case in which one segment is contained within the other
                         if areStreetsWithinStreets(x1, x2, x3, x4) and areStreetsWithinStreets(y1, y2, y3, y4):

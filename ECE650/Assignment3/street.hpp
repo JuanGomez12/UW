@@ -13,11 +13,11 @@ It can also search for the shortest path using the searchShortest() function
 */
 class Street 
 { 
-    int totalCoords;    //Number of segments
+    int totalCoords;//Number of coordinates
 
     std::string name; //name of the street
 
-    std::vector<std::vector<int>> coordVec; //Coordinates matrix for the segments
+    std::vector<std::vector<int>> coordVec; //Coordinate matrix for the segments
 public:
     //Constructor for the class
     Street(std::string streetName);
@@ -34,7 +34,9 @@ public:
     // Function to add a segment to the street
     bool addCoord(const int x1, const int y1);
     //auxiliary function used for checking if a segment is contained within another
-    bool segmentsWithinSegments(int p1, int p2, int q1, int q2);
+    bool segmentsWithinSegments(const int p1, const int p2, const int q1, const int q2);
+    //Check if a specified point is contained within a segment
+    bool pointWithinSegment(const int x, const int y, const int s_x1, const int s_y1, const int s_x2, const int s_y2);
     //Check if the street has any intersections between the segments already in the street and the new segment about to be introduced.
     //Returns false on no collisions detected
     bool checkCollisions(const int x3, const int y3);

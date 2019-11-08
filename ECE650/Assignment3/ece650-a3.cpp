@@ -36,18 +36,34 @@ int main (int argc, char **argv)
             case 's':
                 s_value = optarg;
                 s = atoi(s_value.c_str());
+                if (s < 2){
+                    std::cerr << "Error: s value cannot be less than 2" << std::endl;
+                    return 1;
+                }
                 break;
             case 'n':
                 n_value = optarg;
                 n = atoi(n_value.c_str());
+                if (n < 1){
+                    std::cerr << "Error: n value cannot be less than 1" << std::endl;
+                    return 1;
+                }
                 break;
             case 'l':
                 l_value = optarg;
                 l = atoi(l_value.c_str());
+                if (l < 5){
+                    std::cerr << "Error: l value cannot be less than 5" << std::endl;
+                    return 1;
+                }
                 break;
             case 'c':
                 c_value = optarg;
                 c = atoi(c_value.c_str());
+                if (c < 1){
+                    std::cerr << "Error: c value cannot be less than 1" << std::endl;
+                    return 1;
+                }
                 break;
             }
 
@@ -220,7 +236,7 @@ int main (int argc, char **argv)
     }
     running_proc.push_back(child_pid);
     //------------------------------------------------------------------------------------------------------------------------------------
-    
+
     //Assignment 2 process and pipes
 
     //A2 process
