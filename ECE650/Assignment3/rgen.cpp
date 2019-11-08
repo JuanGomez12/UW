@@ -14,7 +14,7 @@ int s = 10;
 int n = 5;
 int l = 5;
 int c = 20;
-int num_tries = 30; //number of tries each creation of the street will have
+int num_tries = 50; //number of tries each creation of the street will have
 bool verbose = false;
 
 
@@ -114,7 +114,6 @@ std::vector<Street> buildStreets(int s_val, int n_val, int c_val){
                     for (int m = 0 ; m < i; ++m){//If there are no streets created already (its first street)
                         Street prev_street = streets.at(m);
                         if (prev_street.checkIntersect(x_prev, y_prev, x1, y1)){
-                            
                             if (street.addCoord(x1, y1)){
                                 segment_added = true;
                                 intersection_detected = true;
@@ -128,9 +127,6 @@ std::vector<Street> buildStreets(int s_val, int n_val, int c_val){
                                     break;
                                 }
                             }
-                            else{
-                                //Ultimo punto de ultima calle y no hay interseccion hasta ahora
-                            }
                         }
                     }
                     if (i == 0){//Check if it is the first street
@@ -141,7 +137,7 @@ std::vector<Street> buildStreets(int s_val, int n_val, int c_val){
                         }
                     }
                 }
-                else{
+                else{//There's already an intersection on the graph, just add the point if possible
                     if (street.addCoord(x1, y1)){
                         segment_added = true;
                         break;
@@ -157,25 +153,25 @@ std::vector<Street> buildStreets(int s_val, int n_val, int c_val){
         if (verbose){
             street.printSegments();
         }
-        streets.push_back(street);
+        streets.push_back(street);//Add the street to the lsit of streets
     }
-    return streets;
+    return streets;//Return the street vector
 }
 
-void printStreets(std::vector<Street> streets){//Function to add the streets using the a command for A1
+void printStreets(std::vector<Street> streets){//Function to add the streets using the 'a' command for A1 followed by the 'g' command
     for(unsigned int i = 0; i < streets.size(); ++i){
         Street street = streets.at(i);
-        std::cerr << "a \"" << street.getName() << "\" "  << street.getSegmentsString() << std::endl;
+        //std::cerr << "a \"" << street.getName() << "\" "  << street.getSegmentsString() << std::endl;
         std::cout << "a \"" << street.getName() << "\" "  << street.getSegmentsString() << std::endl;
     }
-    std::cerr << "g" << std::endl;
+    //std::cerr << "g" << std::endl;
     std::cout << "g" << std::endl;
 }
 
-void deleteStreets(std::vector<Street> streets){//Function to remove the streets using the r command for A1
+void deleteStreets(std::vector<Street> streets){//Function to remove the streets using the 'r' command for A1
     for(unsigned int i = 0; i < streets.size(); ++i){
         Street street = streets.at(i);
-        std::cerr << "r \"" << street.getName() << "\"" << std::endl;
+        //std::cerr << "r \"" << street.getName() << "\"" << std::endl;
         std::cout << "r \"" << street.getName() << "\"" << std::endl;
     }
 }
@@ -192,7 +188,7 @@ int main (int argc, char **argv)
 
     opterr = 0;
 
-    // expected options are '-s', '-n', '-n' and '-c value'
+    // expected options are '-s', '-n', '-l' and '-c value'
     while ((cmd = getopt (argc, argv, "s:n:l:c:")) != -1)
         switch (cmd)
             {
@@ -233,7 +229,7 @@ int main (int argc, char **argv)
 
 
     bool keepRunning = true;
-    while(true){
+    while(keepRunning){
         std::vector<Street> streets;
         streets = buildStreets(s, n, c);
         if (!streets.empty()){

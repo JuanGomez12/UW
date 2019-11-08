@@ -33,26 +33,27 @@ Street::Street(std::string streetName): totalCoords(0), name(streetName) {}
     bool Street::addCoord(const int x1, const int y1){
         //Check if there are any other coords already in the street
         if (Street::totalCoords > 0){
-            //Check if the segment that would be created would have a distance of 0
+            //Check if the coordinates already exist on the street
             // std::cerr << "[Street::addCoord] Getting the previous coords" << std::endl;
-            std::vector<int> prev_coords = Street::coordVec.at(Street::totalCoords - 1);
-            if ((x1 == prev_coords.at(0)) && (y1 == prev_coords.at(1))){
-                //Previous pair and current pair are the same
-                if(verboseStreet){
-                    std::cout << "street::addSegment: Start and finish coordinates are the same" << std::endl;
-                }
-                return false;
-            }
-            else{
-                //Check if there are no collisions with segments already on the list
-                // std::cerr << "[Street::addCoord] Checking collisions" << std::endl;
-                if (Street::checkCollisions(x1, y1)){
-                    //There was a collision
+            
+            for (int i = 0; i < Street::totalCoords; ++i){
+                if ((x1 == Street::coordVec.at(i).at(0)) && (y1 == Street::coordVec.at(i).at(1))){
                     if(verboseStreet){
-                        std::cout << "street::addSegment: segment intersected others, could not be added" << std::endl;
+                        std::cout << "[street::addCoord] Pair of coordinates already exists in street" << std::endl;
                     }
-                    return false;  
+                    return false;
+                }    
+            }
+
+            
+            //Check if there are no collisions with segments already on the list
+            // std::cerr << "[Street::addCoord] Checking collisions" << std::endl;
+            if (Street::checkCollisions(x1, y1)){
+                //There was a collision
+                if(verboseStreet){
+                    std::cout << "street::addSegment: segment intersected others, could not be added" << std::endl;
                 }
+                return false;  
             }
         }
         
@@ -81,7 +82,6 @@ Street::Street(std::string streetName): totalCoords(0), name(streetName) {}
     return false;
     }
 
-    
   
     bool Street::checkCollisions(const int x4, const int y4){
         int x1, y1, x2, y2, x3, y3;
