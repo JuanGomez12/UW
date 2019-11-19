@@ -88,6 +88,8 @@ int main(int argc, char** argv) {
                             edges_selected = true;
                             //std::cout << "V " << graph.getV() <<std::endl;
                             //std::cout << line << std::endl;
+                            //Call the SAT solver with the specified adjacency matrix
+                            graph.vertex_cover_solver();
                         }
                     }
                     else {

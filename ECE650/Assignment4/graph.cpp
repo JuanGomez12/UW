@@ -165,69 +165,127 @@ bool Graph::shortestPath(int s, int d) {
     return false;
 }
 
+Minisat::Var convertToVar(int integerValue){
+    return integerValue - 1;
+}
+
 int Graph::vertex_cover_solver() {
+    int kVal = 1;
+    bool problemSolved = false;
+     //-----------------------------------------------------------------------------------------------------------
+
     // -- allocate on the heap so that we can reset later if needed
     std::unique_ptr<Minisat::Solver> solver(new Minisat::Solver());
+    //Minisat::Solver solver;
+    for (int k = kVal; k <= V; ++k){//Try to find the vertex cover with the minimum number of k possible
+        solver.reset (new Minisat::Solver()); //reset the solver
+        for (int i = 1; i <= k * V; ++i){
+            solver->newVar();//Define the variables
+        }
+        // ------------------------------------------------------------------
+        //Let's add the group of clauses related to the first argument
+        for (int i = 1; i <= k; ++i){
+            Minisat::vec<Minisat::Lit> litVec; //Create the literal vector
+            int value = i;
+            litVec.push(Minisat::mkLit(convertToVar(value))); //Push the first value to the vector
+            for (int j = 1; j < V; ++j){
+                value = value + k;
+                litVec.push(Minisat::mkLit(convertToVar(value)));
+            }
+            solver->addClause(litVec); //Add the clause
+        }
+        if (solver->solve()){
+            std::cout<< "Problem solvable for argument 1 on k = " << k << std::endl;
+        }
+        // ------------------------------------------------------------------
+        // Now the second group of clauses, related to the second argument
+        for (int i = 0; i < V; ++i){
+            for (int j=0; j < k - 1; ++j){
+                for(int m = j + 1; m < k; ++m){
+                    Minisat::vec<Minisat::Lit> litVec; //Create the literal vector
+                    litVec.push(~Minisat::mkLit(convertToVar(1+ i * k + j)));
+                    litVec.push(~Minisat::mkLit(convertToVar(1+ i * k + m)));
+                    solver->addClause(litVec); //Add the clause
+                    if (verboseGraph){
+                        std::cout << 1 + i * k + j << " ";
+                        std::cout << 1 + i * k + m << std::endl;
+                    }
+                }
+            }
+        }
+        if (solver->solve()){
+            std::cout<< "Problem solvable for argument 2 on k = " << k << std::endl;
+        }
+        // ------------------------------------------------------------------
+        // The third group of clauses, related to the third argument
+        for (int i = 1; i <= k; ++i){
+            for (int j = i; j <= k * V; j = j + k){
+                for(int m = j + k; m <= k * V; m = m + k){
+                    Minisat::vec<Minisat::Lit> litVec; //Create the literal vector
+                    litVec.push(~Minisat::mkLit(convertToVar(j)));
+                    litVec.push(~Minisat::mkLit(convertToVar(m)));
+                    solver->addClause(litVec); //Add the clause
+                    if (verboseGraph){
+                        std::cout << j << " ";
+                        std::cout << m << std::endl;
+                    }
+                }
+            }
+        }
+        if (solver->solve()){
+            std::cout << "Problem solvable for argument 3 on k = " << k << std::endl;
+        }
+        // ------------------------------------------------------------------
+        // The fourth group of clauses, related to the edges of the graph
+        int adjMatSize = adjMat.size();
+        for(int i = 0; i < adjMatSize; ++i){
+            for (int j = i; j < adjMatSize; ++j){
+                if (adjMat.at(i).at(j) != 0){
+                    Minisat::vec<Minisat::Lit> litVec; //Create the literal vector
+                    for (int m = 0; m < k; m++){
+                        if (verboseGraph){
+                            std::cout << (i*k + m + 1) << " ";
+                            std::cout << (j*k + m + 1) << std::endl;
+                        }
+                        litVec.push(Minisat::mkLit(convertToVar(i*k + m + 1)));
+                        litVec.push(Minisat::mkLit(convertToVar(j*k + m + 1)));
+                    }
+                    solver->addClause(litVec); //Add the clause
+                }
+            }
+        }
+        if (solver->solve()){
+            std::cout<< "Problem solvable for argument 4 on k = " << k << std::endl;
+        }
+        // ------------------------------------------------------------------
+        //Try solving for this value of k
+        problemSolved = solver->solve();
+        std::cout<< "Value of solver: " << problemSolved <<std::endl;
+        if (problemSolved){
+        //if (!problemSolved){
+            kVal = k; // Optimal value of k found
+            
+            //Obtain the real values of the vertices
+            std::vector<int> verticesList;
+            for (int i = 1; i <= k * V; ++i){
+                std::cout<< "Value number " << i << " is: " << Minisat::toInt(solver->modelValue(convertToVar(i))) << std::endl;
+                if (Minisat::toInt(solver->modelValue(convertToVar(i))) == 0){ // 0 means the variable is set to true
+                    int numVar = i;
+                    int vertexCounter = -1;
+                    while(numVar > 0){
+                        vertexCounter = vertexCounter + 1;
+                        numVar = numVar - k;
+                    }
+                    verticesList.push_back(vertexCounter + 1);
+                    if (true){
+                        std::cout<< "Total number of vertices are:  "<< k << ", one of them is number: " << vertexCounter << std::endl;
+                    }
+                }
+            }
+            
 
-    Minisat::Lit l1, l2, l3, l4;
-
-    // create 4 positive literals over 4 new variables
-    l1 = Minisat::mkLit(solver->newVar());
-    l2 = Minisat::mkLit(solver->newVar());
-    l3 = Minisat::mkLit(solver->newVar());
-    l4 = Minisat::mkLit(solver->newVar());
-
-    // create 3 positive literals over 3 new variables
-    Minisat::Lit b0, b1, b2;
-    b0 = Minisat::mkLit(solver->newVar());
-    b1 = Minisat::mkLit(solver->newVar());
-    b2 = Minisat::mkLit(solver->newVar());
-
-    // (l1 || b0)
-    solver->addClause(l1, b0);
-    // (!b0 || l2 || b1)
-    solver->addClause(~b0, l2, b1);
-    // (!b1 || l3 || b2)
-    solver->addClause(~b1, l3, b2);
-    // (!b2|| l4)
-    solver->addClause(~b2, l4);
-
-    bool res = solver->solve();
-    std::cout << "The result is: " << res << "\n";
-
-    std::cout << "satisfying assignment is: "
-              << "l1=" << Minisat::toInt(solver->modelValue(l1)) << " "
-              << "l2=" << Minisat::toInt(solver->modelValue(l2)) << " "
-              << "l3=" << Minisat::toInt(solver->modelValue(l3)) << " "
-              << "l4=" << Minisat::toInt(solver->modelValue(l4)) << " "
-              << "b0=" << Minisat::toInt(solver->modelValue(b0)) << " "
-              << "b1=" << Minisat::toInt(solver->modelValue(b1)) << " "
-              << "b2=" << Minisat::toInt(solver->modelValue(b2)) << std::endl;
-
-    // more clauses can be added to the solver
-    std::cout << "Adding more clauses...\n";
-    solver->addClause (~l1);
-    solver->addClause (~l2);
-    solver->addClause (~l3);
-    solver->addClause (~l4);
-
-    // check whether the CNF in the solver is still satisfiable
-    res = solver->solve();
-    std::cout << "New result is: " << res << "\n";
-
-    std::cout << "satisfying assignment is: "
-              << "l1=" << Minisat::toInt(solver->modelValue(l1)) << " "
-              << "l2=" << Minisat::toInt(solver->modelValue(l2)) << " "
-              << "l3=" << Minisat::toInt(solver->modelValue(l3)) << " "
-              << "l4=" << Minisat::toInt(solver->modelValue(l4)) << " "
-              << "b0=" << Minisat::toInt(solver->modelValue(b0)) << " "
-              << "b1=" << Minisat::toInt(solver->modelValue(b1)) << " "
-              << "b2=" << Minisat::toInt(solver->modelValue(b2)) << std::endl;
-    // the next line de-allocates existing solver and allocates a new
-    // one in its place.
-    solver.reset (new Minisat::Solver());
-
-    // at this point the solver is ready. You must create new
-    // variable and new clauses
+            //return the vertices
+            break;
+        }
     return 0;
 }
