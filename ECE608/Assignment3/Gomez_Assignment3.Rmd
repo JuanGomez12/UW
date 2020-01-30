@@ -33,9 +33,9 @@ df <- na.omit(df)
 The resulting 59 observations can be used correctly for the solution of this assignment. The units for the blood flow are not given, so will be assumed to be in ml/s
 
 # Question 1
-For this question, you do not have to check assumptions: [4 marks] 
 
-## a. Conduct the appropriate t-test for the effect of sex on Flow at T0. What is the t value? 
+
+## a.
 First, the mean and standard deviation (SD) are needed in order to properly conclude based on our results:
 ```{r Q1.a mean and SD}
 df %>% 
@@ -49,7 +49,7 @@ t.test(formula = T0~factor(Sex), data = df, alternative = "two.sided", var.equal
 ```
 Mean blood flow in males was found to be larger in comparison to females in time 0 of the exercise experiment (133.02±42.05 vs 86.71±40.45; t=-4.19, P<0.01).
 
-## b. Conduct a one-way ANOVA for the effect of sex on Flow at T0. What is the F value?
+## b.
 A one-way ANOVA will be used to examine the difference in blood flow due to the sex of the person doing the exercise at time 0. Statistical significance will be interpreted at alpha = 0.05.
 ```{r Q1.b ANOVA, warning=FALSE, message = FALSE}
 df.ez <- ezANOVA(data = df, #dataset
@@ -76,7 +76,7 @@ TukeyHSD(x = df.ez[["aov"]])
 ```
 Post-hoc analysis revealed that the males had a significantly larger blood flow compared to females during T0 (133.02±42.05 vs 86.71±40.45; P<0.01) .
 
-## c. How does your t value squared (t2) compare to your F value? In general, what would this signify? 
+## c.
 First, we need to obtain t squared:
 ```{r Q1.c t squared}
 (-4.19)^2
@@ -84,8 +84,8 @@ First, we need to obtain t squared:
 Comparing the squared t value to the F value, it can be seen that the t value is the square root of the f value (approximately, this may be due to various factors like rounding of the decimals or the floating-point number representation in computers). This indicates that both statistics are related and would mean that an ANOVA could be seen as a somewhat more general approach to a t-test for multiple comparison groups.
 
 # Question 2
-For this question, check assumptions and make the appropriate data transformations: [6 marks] 
-## a. Run a one-way ANOVA to examine whether Flow differs by exercise condition. Report the ANOVA main effects in a publishable single-line summary.  
+
+## a.
 First, the DF must be modified to a long format:
 ```{r DF long transformation}
 df_long <- df %>% 
@@ -143,7 +143,7 @@ Levene's test indicate that the variance of the data is not unequal (F=1.85, P=0
 
 With this, it can be concluded that a main effect on blood flow due to exercise conditions was found (F=2.822; P=0.047).
 
-## b. First, use t-tests with the Bonferroni correction method to assess main effects. 
+## b.
 First, we need to calculate the mean and standard deviation of the samples:
 ```{r Q2 mean and SD}
 df_long %>% 
@@ -162,19 +162,19 @@ pairwise.t.test(x = df_long$BloodFlow, #what you are measuring
 
 Post-hoc analysis revealed that the blood flow for weights was significantly larger than for bike (117.70±50.25 vs 96.17±36.04; P=0.01), for rest (117.70±50.25 vs 86.37±32.47; P<0.01) and for sprint (117.70±50.25 vs 94.97±40.33; P<0.01).
 
-## c. Second, use the Tukey’s HSD method to assess main effects. 
+## c.
 Post-hoc analysis will now be done using Tukey's Honestly Significant Difference (HSD) test. Statistical significance will be interpreted at alpha = 0.05.
 ```{r Q2.c Post-hoc: Tukey HSD}
 TukeyHSD(x = df_long.ez[["aov"]])
 ```
 Post-hoc analysis revealed that the blood flow from doing weights was significantly larger than the one present during rest (117.70±50.25 vs 86.37±32.47; P=0.03).
 
-## d. Is there a discrepancy between the p-value results from the post-hoc t-tests and the results from the Tukey’s HSD? If so, why might this be?
+## d.
 There is a discrepancy between both p-values of the post-hoc tests, which might be explained due to the fact that the Bonferroni approach uses adjusted p-values. These adjusted p-values take into account the repetition of the t-tests for its calculations, helping maintain a low level of error propagation through the course of the statistical tests. Due to this, it can be considered that the Bonferroni approach is more conservative than Tukey's when dealing with multiple t-tests.
 
 # Question 3
-For this question, check all assumptions, make the appropriate data transformations, run the analyses, summarize the main effects and posthocs in a publishable format, and make a publishable graph of the primary findings. [10 marks] 
-## a. Run a one-way ANOVA to examine whether flow changes over time.
+
+## a.
 First, a one-way ANOVA for the blood flow difference through time must be calculated. Statistical significance will be interpreted at alpha = 0.05.
 ```{r Q3.a ANOVA, warning = FALSE, message = FALSE}
 df_long.ez <- ezANOVA(data = df_long, #dataset
@@ -268,7 +268,7 @@ grid.arrange(plotBox, figCaption, ncol = 1, heights = c(0.9, 0.1))
 
 In conclusion, it can be said that there a main effect on the blood flow due to the passing of time after exercising (F=7.90, P<0.01). Post-hoc analysis revealed that the mean blood flow in T0 was significantly larger than in T30 (115.75±46.90 vs 90.81±41.60), T60 (115.75±46.90 vs 98.66±37.95), T90 (115.75±46.90 vs 90.98±36.60) and in T120 (115.75±46.90 vs 99.11±42.96).
 
-## b. From the results, recreate the classic ANOVA table we have used in lecture
+## b.
 We can obtain all of the information needed to create the table from the "aov" element of the ezANOVA list:
 ```{r Q3.b Review of ANOVA information from Q3.a}
 print(df_long.ez[["aov"]])
@@ -282,8 +282,8 @@ Time (RM)     24311.02    4           6077.76     7.90       <0.01
 Random Error  178339.27   232         768.70
 
 # Question 4
-For this question, run the analyses, summarize the results and posthocs in a publishable format and make a publishable graph of the primary findings. [10 marks] 
-## a. Examine whether there is a difference between men and women for the timecourse of blood flow responses (i.e., after T0, T30, T60, T90, and T120) to Sprint exercise.
+
+## a.
 The solution of this problem can be obtained using a factorial ANOVA for the sex as a between subject’s variable, and the time as a within subject’s variable. Statistical significance will be interpreted at alpha = 0.05.
 First, the data should be filtered as to only take into account the Sprint condition of the exercises
 ```{r Q4.a DF Sprint filtering}
@@ -444,7 +444,7 @@ figCaption <- textGrob("Figure 5. Box Plot for the Blood Flow (in ml/s) for both
 grid.arrange(plotBox, figCaption, ncol = 1, heights = c(0.9, 0.1))
 ```
 
-## b. From the results, recreate the classic ANOVA table we have used in lecture.
+## b.
 To obtain the ANOVA table, we can use the results obtained in Q4.a for the F value and the p value:
 ```{r Q4.b ANOVA Results Review from Q4.a}
 df_long_Q4.ez[['ANOVA']]
