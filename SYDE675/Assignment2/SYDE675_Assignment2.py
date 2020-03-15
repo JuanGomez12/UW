@@ -5,7 +5,7 @@
 import pandas as pd
 import numpy as np
 import math
-verbose = True
+verbose = False
 
 # Try getting the file locally, if not found try it online
 try:
@@ -68,7 +68,7 @@ def condEntropyCalc(data, classColumn, attribute, threshold):
 
 def catCondEntropyCalc(data, classColumn, attribute):
   condEntropy=[]
-  vals = np.unique((data)[:, attribute])
+  vals = np.unique(data[:, attribute])
   for val in vals:
     dataset = data[data[:, attribute] == val]
     p = dataset.shape[0]/data.shape[0]
@@ -82,8 +82,8 @@ def is_number(val):
     return False
   return True
 
-def is_categorical(data, attribute):
-  return all([is_number(sample) for sample in data[:, attribute]])
+def is_categorical(data):
+  return all([is_number(sample) for sample in data])
 
 def intrinsicVal(data, attribute, threshold = None):
   if threshold is None:
@@ -91,17 +91,17 @@ def intrinsicVal(data, attribute, threshold = None):
   else:
     dataCat = data[:, attribute] < threshold
   intrinsic = entropyCalc(dataCat)
-  if intrinsic == 0.0:
-    print()
   return intrinsic
 
 def bestEntropyCalc(data, classColumn, featsLeft, gain_ratio):
+  bestAttribute = None
+  bestThreshold = None
   entropy = entropyCalc(data, classColumn)
   # Sort the array on the specific attribute
   bestInfoGain = 0.0
   for attr in featsLeft:
     # If the data is categorical:
-    if is_categorical(data, attr):
+    if is_categorical(data[:, attr]):
       # If the data is numerical
       dataSort = data[data[:, attr].argsort()]
       lbl = dataSort[0, classColumn] # Get the first label
@@ -134,7 +134,10 @@ def bestEntropyCalc(data, classColumn, featsLeft, gain_ratio):
       currentEntropy = (entropy - condEntropy)
       if gain_ratio:
         intrinsicValue = intrinsicVal(data, attr)
-        currentEntropy = currentEntropy / intrinsicValue
+        if intrinsicValue == 0.0:
+          currentEntropy = 0
+        else:
+          currentEntropy = currentEntropy / intrinsicValue
       if  currentEntropy > bestInfoGain:
             bestThreshold = np.unique(data[:, attr])
             bestAttribute = attr
@@ -163,9 +166,48 @@ class DT:
     self.prediction = prediction
     self.leaves = leaves
   def __repr__(self):
-      return "Tree object"
+    return "Tree object"
   def __str__(self):
-      return "Member of tree"
+    return "Member of tree"
+  def predict(self, value):
+    subTree = self
+    prediction = subTree.prediction
+    leaves = subTree.leaves
+
+    while leaves is not None:
+      if verbose:
+        print('-----------------------')
+      feat = subTree.featUsed
+      thresh = subTree.threshold
+      
+      if not isinstance(thresh, np.ndarray):
+        # Attribute is numerical
+        if verbose:
+          print('Numerical feat used: {0:d}, thresh used: {1:.2f} and value of samples is {2}'.format(feat, thresh, value[feat]))
+        if value[feat] < thresh:
+          if verbose:
+            print('Feat smaller than tresh')
+          leaf = 0
+        else:
+          if verbose:
+            print('Feat larger than tresh')
+          leaf = 1
+      else:
+        # Attribute is categorical
+        if verbose:
+            print('Categorical feat used: {0:d}, values has {1}'.format(feat, value[feat]))
+        indices = np.where(thresh == value[feat])[0]
+        try:
+          leaf = indices[0]
+        except:
+          leaf = None
+      if leaf is not None:
+        subTree = subTree.leaves[leaf]
+        leaves = subTree.leaves
+        prediction = subTree.prediction
+      else:
+        leaves = None
+    return prediction
 
 def decisionTree(dataSamplesX, dataSamplesY, feats_Left = None, gain_ratio = False):
   dataSamplesY = np.reshape(dataSamplesY,(-1,1))
@@ -188,64 +230,26 @@ def decisionTree(dataSamplesX, dataSamplesY, feats_Left = None, gain_ratio = Fal
     dTree.prediction = max(set(classList), key = classList.count)
     return dTree
   else:
-    bestAttr, bestTresh = bestEntropyCalc(dataSamples, classColumn, featsLeft, gain_ratio)
+    bestAttr, bestThresh = bestEntropyCalc(dataSamples, classColumn, featsLeft, gain_ratio)
     dTree.featUsed = bestAttr
-    dTree.threshold = bestTresh
+    dTree.threshold = bestThresh
 
     classList = dataSamples[:, classColumn].tolist()
     dTree.prediction = max(set(classList), key = classList.count)
-    
-    featsLeft.remove(bestAttr)
-    dTree.featsLeft = featsLeft
-    
-    dataLeaves = dataLeaver(dataSamples, bestAttr, bestTresh)
-    leaves = []
-    for leaf, i in zip(dataLeaves, range(dataLeaves.shape[0])):
-      if verbose:
-        print('Leaf number {0:d}'.format(i))
-        print('split attribute: ', bestAttr)
-        print('Feats left: ', featsLeft)
-      leaves.append(decisionTree(leaf[:, :classColumn], leaf[:, classColumn], featsLeft, gain_ratio))
-    dTree.leaves = list(leaves)
+    if bestAttr is not None and bestThresh is not None:
+      featsLeft.remove(bestAttr)
+      dTree.featsLeft = featsLeft
+      
+      dataLeaves = dataLeaver(dataSamples, bestAttr, bestThresh)
+      leaves = []
+      for leaf, i in zip(dataLeaves, range(dataLeaves.shape[0])):
+        if verbose:
+          print('Leaf number {0:d}'.format(i))
+          print('split attribute: ', bestAttr)
+          print('Feats left: ', featsLeft)
+        leaves.append(decisionTree(leaf[:, :classColumn], leaf[:, classColumn], featsLeft, gain_ratio))
+      dTree.leaves = list(leaves)
   return dTree
-
-def predict(tree, value):
-  subTree = tree
-  prediction = subTree.prediction
-  leaves = subTree.leaves
-
-  while leaves is not None:
-    if verbose:
-      print('-----------------------')
-    feat = subTree.featUsed
-    thresh = subTree.threshold
-    
-    if not isinstance(thresh, np.ndarray):
-      # Attribute is numerical
-      if verbose:
-        print('Numerical feat used: {0:d}, thresh used: {1:.2f} and value of samples is {2}'.format(feat, thresh, value[feat]))
-      if value[feat] < thresh:
-        if verbose:
-          print('Feat smaller than tresh')
-        leaf = 0
-      else:
-        if verbose:
-          print('Feat larger than tresh')
-        leaf = 1
-    else:
-      # Attribute is categorical
-      if verbose:
-          print('Categorical feat used: {0:d}, values has {1}'.format(feat, value[feat]))
-      indices = np.where(thresh == value[feat])[0]
-      if indices.shape[0] > 0:
-        leaf = indices[0]
-      else:
-        leaves = None
-    if leaves is not None:
-      subTree = subTree.leaves[leaf]
-    prediction = subTree.prediction
-    leaves = subTree.leaves
-  return prediction
 
 def k_folder(data, folds = 10):
   """ Get the input data, with rows being the samples, and create the amount of folds selected.
@@ -277,7 +281,7 @@ def trainTestTree(trainData, testData, classColumn, gain_ratio = False):
   correctPredictions = 0
   totalValues = testData.shape[0]
   for i in range(totalValues):
-    prediction = predict(tree, testData[i, :])
+    prediction = tree.predict(testData[i, :])
     if testData[i, classColumn] == prediction:
       correctPredictions += 1
   accuracy = correctPredictions/totalValues
@@ -301,27 +305,85 @@ def k_fold_crossval(dataX, dataY, folds = 10, gain_ratio = False):
     accuracy.append(acc)
   return list(accuracy), list(forest)
 
+if verbose:
+  # Test the tree creation
+  tree = decisionTree(array_wine[:,1:], array_wine[:,0], gain_ratio = True)
+  tree_TTT = decisionTree(array_TTT[:,:9], array_TTT[:,9], gain_ratio = True)
+  #print(tree.leaves[0].leaves[1].leaves[1].prediction) # Check if it is creating the tree correctly
+  print('wine prediction of val 20: ', tree.predict(array_wine[20, 1:]))
+  print('wine prediction of val 120: ', tree.predict(array_wine[120, 1:]))
+  print('TTT prediction of val 100: ', tree_TTT.predict(array_TTT[100, :9]))
+  print('TTT prediction of val 700: ', tree_TTT.predict(array_TTT[700, :9]))
 
+# Question 2 a)
+# First, using the wine dataset
+array = array_wine
+accuracies_wine = []
+forests_wine = []
+for i in range(10):
+  np.random.shuffle(array)
+  accuracy_wine, forest_wine = k_fold_crossval(array[:,1:], array[:,0], gain_ratio = False)
+  accuracies_wine.append(accuracy_wine)
+  forests_wine.append(forest_wine)
 
-# Test the tree creation
-tree = decisionTree(array_wine[:,1:], array_wine[:,0], gain_ratio = True)
-tree_TTT = decisionTree(array_TTT[:,:9], array_TTT[:,9], gain_ratio = True)
-#print(tree.leaves[0].leaves[1].leaves[1].prediction) # Check if it is creating the tree correctly
-print('wine prediction of val 20: ', predict(tree, array_wine[20, 1:]))
-print('wine prediction of val 120: ', predict(tree, array_wine[120, 1:]))
-print('TTT prediction of val 100: ', predict(tree_TTT, array_TTT[100, :9]))
-print('TTT prediction of val 700: ', predict(tree_TTT, array_TTT[700, :9]))
-
-# Test the crossval for wine
-# array = array_wine
-# # np.random.shuffle(array)
-# accuracy_wine, forest_wine = k_fold_crossval(array[:,1:], array[:,0])
-# print(accuracy_wine)
-# print(np.mean(accuracy_wine))
-
-# Now for TTT
+# Now using the Tic-tac-toe dataset
 array = array_TTT
-# np.random.shuffle(array)
-accuracy_TTT, forest_TTT = k_fold_crossval(array_TTT[:,:9], array_TTT[:,9])
-print(accuracy_TTT)
-print(np.mean(accuracy_TTT))
+accuracies_TTT = []
+forests_TTT = []
+for i in range(10):
+  np.random.shuffle(array)
+  accuracy_TTT, forest_TTT = k_fold_crossval(array[:,:9], array[:,9], gain_ratio = False)
+  accuracies_TTT.append(accuracy_TTT)
+  forests_TTT.append(forest_TTT)
+
+# Question 2 b)
+# Using the wine dataset
+array = array_wine
+accuracies_wine = []
+forests_wine = []
+for i in range(10):
+  np.random.shuffle(array)
+  accuracy_wine, forest_wine = k_fold_crossval(array[:,1:], array[:,0], gain_ratio = True)
+  accuracies_wine.append(accuracy_wine)
+  forests_wine.append(forest_wine)
+
+# Now using the Tic-tac-toe dataset
+array = array_TTT
+accuracies_TTT = []
+forests_TTT = []
+for i in range(10):
+  np.random.shuffle(array)
+  accuracy_TTT, forest_TTT = k_fold_crossval(array[:,:9], array[:,9], gain_ratio = True)
+  accuracies_TTT.append(accuracy_TTT)
+  forests_TTT.append(forest_TTT)
+
+
+def addAttrNoise(data, percentage):
+  # Set the sample size
+  sample_size = data.shape[0]
+  # Set the divider using a uniform distr., for selecting the attributes to add noise
+  divider = np.random.uniform(size = sample_size).T
+  totalSamples = np.concatenate([data, divider], axis = 1)
+  noisyData = data[data[:,-1] <= percentage]
+  cleanData = data[data[:,-1] > percentage]
+
+  # Add noise to each attr
+  for attr in data.shape[1]:
+    addNoise = np.random.randint(2) # Decide if the attribute will have noise added
+    if addNoise:
+      # Check if the data is numerical or categorical
+      if is_categorical(data[:, attr]): #If the data is categorical
+        vals = np.unique((data)[:, attr]) # Find the possible labels for the attribute
+        noisyVal = vals[np.random.randint(vals.shape[0])] # Select randomly one of the labels
+        # Assign it to the value in the data
+      else:
+        pass
+  # Rebuild the dataset
+  noisedUpData = np.concatenate([noisyData, cleanData], axis = 0)
+  noisedUpData = numpy.delete(noisedUpData, noisedUpData.shape[1], axis = 1)
+  np.random.shuffle(noisedUpData)
+  return noisedUpData
+
+
+def addClassNosie():
+  pass
