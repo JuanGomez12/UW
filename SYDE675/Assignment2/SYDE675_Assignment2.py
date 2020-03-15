@@ -367,6 +367,7 @@ def addAttrNoise(data, percentage):
   noisyData = data[data[:,-1] <= percentage]
   cleanData = data[data[:,-1] > percentage]
 
+
   # Add noise to each attr
   for attr in data.shape[1]:
     addNoise = np.random.randint(2) # Decide if the attribute will have noise added
