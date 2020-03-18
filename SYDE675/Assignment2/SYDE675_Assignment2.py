@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import math
 verbose = False
+test = True
 
 # Try getting the file locally, if not found try it online
 try:
@@ -82,7 +83,7 @@ def is_number(val):
     return False
   return True
 
-def is_categorical(data):
+def is_numerical(data):
   return all([is_number(sample) for sample in data])
 
 def intrinsicVal(data, attribute, threshold = None):
@@ -101,7 +102,7 @@ def bestEntropyCalc(data, classColumn, featsLeft, gain_ratio):
   bestInfoGain = 0.0
   for attr in featsLeft:
     # If the data is categorical:
-    if is_categorical(data[:, attr]):
+    if is_numerical(data[:, attr]):
       # If the data is numerical
       dataSort = data[data[:, attr].argsort()]
       lbl = dataSort[0, classColumn] # Get the first label
@@ -211,7 +212,7 @@ class DT:
 
 def decisionTree(dataSamplesX, dataSamplesY, feats_Left = None, gain_ratio = False):
   dataSamplesY = np.reshape(dataSamplesY,(-1,1))
-  dataSamples = np.concatenate([dataSamplesX, dataSamplesY], axis=1)
+  dataSamples = np.concatenate([dataSamplesX, dataSamplesY], axis = 1)
   classColumn = dataSamples.shape[1] - 1
   dTree = DT()
   if feats_Left is not None:
@@ -305,7 +306,7 @@ def k_fold_crossval(dataX, dataY, folds = 10, gain_ratio = False):
     accuracy.append(acc)
   return list(accuracy), list(forest)
 
-if verbose:
+if verbose and test:
   # Test the tree creation
   tree = decisionTree(array_wine[:,1:], array_wine[:,0], gain_ratio = True)
   tree_TTT = decisionTree(array_TTT[:,:9], array_TTT[:,9], gain_ratio = True)
@@ -358,33 +359,89 @@ for i in range(10):
   forests_TTT.append(forest_TTT)
 
 
-def addAttrNoise(data, percentage):
-  # Set the sample size
-  sample_size = data.shape[0]
-  # Set the divider using a uniform distr., for selecting the attributes to add noise
-  divider = np.random.uniform(size = sample_size).T
-  totalSamples = np.concatenate([data, divider], axis = 1)
-  noisyData = data[data[:,-1] <= percentage]
-  cleanData = data[data[:,-1] > percentage]
-
-
-  # Add noise to each attr
-  for attr in data.shape[1]:
-    addNoise = np.random.randint(2) # Decide if the attribute will have noise added
-    if addNoise:
-      # Check if the data is numerical or categorical
-      if is_categorical(data[:, attr]): #If the data is categorical
-        vals = np.unique((data)[:, attr]) # Find the possible labels for the attribute
-        noisyVal = vals[np.random.randint(vals.shape[0])] # Select randomly one of the labels
-        # Assign it to the value in the data
-      else:
-        pass
-  # Rebuild the dataset
-  noisedUpData = np.concatenate([noisyData, cleanData], axis = 0)
-  noisedUpData = numpy.delete(noisedUpData, noisedUpData.shape[1], axis = 1)
-  np.random.shuffle(noisedUpData)
-  return noisedUpData
-
+if test:
+  print('Wine: ', np.mean(accuracies_wine))
+  print('TTT: ', np.mean(accuracies_TTT))
 
 def addClassNosie():
   pass
+
+from sklearn.preprocessing import StandardScaler
+def addAttrNoise(dataX, dataY, percentage):
+  dataY = np.reshape(dataY, (-1,1))
+  # data = np.concatenate([dataX, dataY], axis = 1)
+  # Set the sample size
+  sample_size = dataX.shape[0]
+
+  # Create an index for the data
+  index = np.arange(sample_size)
+  index = index[np.newaxis].T
+
+  # standardize the dataset
+  dataScaler = StandardScaler()
+  data_scaled = dataScaler.fit_transform(dataX)
+
+  # Set the divider using a uniform distr., for selecting the attributes to add noise
+  divider = np.random.uniform(size = sample_size)
+  divider = divider[np.newaxis].T
+
+  # Add the divider and the index to the dataset
+  totalSamples = np.concatenate([index, data_scaled, divider], axis = 1)
+
+  # Separate the data into clean and soon to be noisy
+  noisyData = totalSamples[totalSamples[:,-1] <= percentage]
+  cleanData = totalSamples[totalSamples[:,-1] > percentage]
+
+  # Remove the divider
+  noisyData = noisyData[:, :-1]
+  cleanData = cleanData[:, :-1]
+
+  # Find which values are categories (and what are they), and which aren't categories
+  numericalVals = []
+  categories = []
+  for attr in range(data_scaled.shape[1]):
+    numericalVal = is_numerical(data_scaled[:, attr])
+    if not numericalVal:
+      cats = np.unique(data_scaled[:, attr]) # Find the possible labels for the attribute
+    else:
+      cats = None
+    numericalVals.append(numericalVal)
+    categories.append(cats)
+
+  count = 0 # To see how many values were modified
+
+  # Add noise to each value
+  for val in range(noisyData.shape[0]):
+    # Add noise to each attr
+    for attr in range(1, noisyData.shape[1]): # Starts in 1 so as to not add noise to the index
+      addNoise = np.random.randint(2) # Decide if the attribute will have noise added
+      if addNoise:
+        count += 1
+        if verbose:
+          print('Adding noise to attr:', attr, 'in val:', val, 'with a value of:', noisyData[val, attr])
+        # Check if the data is numerical or categorical
+        if numericalVals[attr - 1]: # If the data is numerical
+          noise = np.random.normal()
+          noisyData[val, attr] = noisyData[val, attr] + noise
+        else:
+         # It is a categorical value
+          cats = categories[attr] # Retrieve the labels for the attribute
+          noisyVal = cats[np.random.randint(cats.shape[0])] # Select randomly one of the labels
+          # Assign it to the value in the data
+          noisyData[val, attr] = noisyVal
+        if verbose:
+          print('val now is:', noisyData[val, attr])
+
+  # Rebuild the dataset
+  noisedUpData = np.concatenate([noisyData, cleanData], axis = 0)
+  noisedUpData = np.delete(noisedUpData, noisedUpData.shape[1] - 1, axis = 1)
+  np.random.shuffle(noisedUpData)
+  noisedUpData = dataScaler.inverse_transform(noisedUpData)
+  if verbose:
+    print('Total vals changed:', count)
+  return noisedUpData
+
+
+# Test the nosie addition function
+if test:
+  w = addAttrNoise(array_wine[:,1:], array_wine[:,0], 0.05)
