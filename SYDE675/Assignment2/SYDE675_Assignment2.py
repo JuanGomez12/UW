@@ -443,6 +443,7 @@ print('Wine dataset accuracy: mean is {0:.2f}% and variance is {1:.4f}'.format(1
 print('Tic-tac-toe dataset accuracy: mean is {0:.2f}% and variance is {1:.4f}'.format(100 * np.mean(accuracies_TTT), np.var(accuracies_TTT)))
 
 plotConfMat(bestConfMat_wine, bestConfMat_TTT, labels_wine, labels_TTT, saveFig = saveResults)
+
 # Question 2 b)
 # Using the wine dataset
 array = array_wine
@@ -483,22 +484,24 @@ print('Question 2. b)')
 print('Wine dataset accuracy: mean is {0:.2f}% and variance is {1:.4f}'.format(100 * np.mean(accuracies_wine), np.var(accuracies_wine)))
 print('Tic-tac-toe dataset accuracy: mean is {0:.2f}% and variance is {1:.4f}'.format(100 * np.mean(accuracies_TTT), np.var(accuracies_TTT)))
 
+plotConfMat(bestConfMat_wine, bestConfMat_TTT, labels_wine, labels_TTT, saveFig = saveResults)
 
-# Question 3 a)
-def addClassNosie():
-  pass
+# Question 3 A)
 
 from sklearn.preprocessing import StandardScaler
 def addAttrNoise(dataX, dataY, percentage):
+  """ Get the input data, in the form of [n_samples, n_attrributes], and return the dataset
+    with the desired percentage of it modified with noise.
+  Args:
+        dataX (numpy array): Numpy array with the dataset's attributes. The function
+          assumes that the samples are the rows, while the columns are the attributes.
+        dataY (numpy array): Numpy array with the dataset's labels or classes.
+        percentage (float): Percentage of the dataset to modify with noise
+  Returns:
+      noisedUpData: One joined dataset with the respective noise and the class column 
+        as the last column of the dataset
+  """
   dataY = np.reshape(dataY, (-1,1))
-  # data = np.concatenate([dataX, dataY], axis = 1)
-  # Set the sample size
-  sample_size = dataX.shape[0]
-
-  # Create an index for the data
-  index = np.arange(sample_size)
-  index = index[np.newaxis].T
-
   # Find which values are categories (and what are they), and which aren't categories
   numericalVals = []
   categories = []
@@ -517,6 +520,13 @@ def addAttrNoise(dataX, dataY, percentage):
     data_scaled = dataScaler.fit_transform(dataX)
   else:
     data_scaled = dataX
+
+  # Set the sample size
+  sample_size = dataX.shape[0]
+
+  # Create an index for the data
+  index = np.arange(sample_size)
+  index = index[np.newaxis].T
 
   # Set the divider using a uniform distr., for selecting the attributes to add noise
   divider = np.random.uniform(size = sample_size)
@@ -576,4 +586,71 @@ def addAttrNoise(dataX, dataY, percentage):
 if test:
   w = addAttrNoise(array_wine[:, 1:], array_wine[:,0], 0.05)
   w = addAttrNoise(array_TTT[:, :-1], array_TTT[:,-1], 0.05)
+  print('done')
+
+# Question 3 B)
+def addClassNoise(dataX, dataY, percentage, contradictory = False):
+  #Contradictory examples. The same examples appear more than once and are labeled with different classifications  
+  #Misclassifications. Instances are labeled with wrong classes. This type of errors is common in situations that different classes have similar sympto
+  dataY = np.reshape(dataY, (-1,1))
+
+  categories = np.unique(dataY) # Find the possible labels for the class
+
+  # Set the sample size
+  sample_size = dataX.shape[0]
+
+  # Create an index for the data
+  index = np.arange(sample_size)
+  index = index[np.newaxis].T
+
+  # Set the divider using a uniform distr., for selecting the attributes to add noise
+  divider = np.random.uniform(size = sample_size)
+  divider = divider[np.newaxis].T
+
+  # Add the divider and the index to the dataset
+  totalSamples = np.concatenate([index, dataX, dataY, divider], axis = 1)
+
+  # Separate the data into clean and soon to be noisy
+  noisyData = totalSamples[totalSamples[:,-1] <= percentage]
+  cleanData = totalSamples[totalSamples[:,-1] > percentage]
+
+  # Remove the divider
+  noisyData = noisyData[:, :-1]
+  cleanData = cleanData[:, :-1]
+
+  if contradictory: # If creating contradictory samples
+    duplicateData = np.copy(noisyData)
+
+  # Add noise to each value
+  for val in range(noisyData.shape[0]):
+    if contradictory: # If creating contradictory samples
+      noisyVal =  categories[np.random.randint(categories.shape[0])] # Select randomly one of the labels
+      while noisyVal == noisyData[val, -1]:
+        noisyVal =  categories[np.random.randint(categories.shape[0])]
+      # Assign it to the value in the data
+      noisyData[val, -1] = noisyVal
+    else: # If adding missclassifications
+      if verbose:
+        print('Adding noise to class in val:', val, 'with a value of:', noisyData[val, -1])
+      noisyVal = categories[np.random.randint(categories.shape[0])] # Select randomly one of the labels
+      # Assign it to the value in the data
+      noisyData[val, -1] = noisyVal
+    if verbose:
+      print('val now is:', noisyData[val, -1])
+
+
+  # Rebuild the dataset
+  if contradictory: # If creating contradictory samples
+    noisyData = np.concatenate([noisyData, duplicateData], axis = 0)
+  noisedUpData = np.concatenate([noisyData, cleanData], axis = 0)
+  # noisedUpData = np.delete(noisedUpData, noisedUpData.shape[1] - 1, axis = 1) # Delete the divider
+  noisedUpData = noisedUpData[noisedUpData[:,0].argsort()]
+  noisedUpData = np.delete(noisedUpData, 0, axis = 1) # Delete the index column
+  return noisedUpData
+
+if test:
+  a = addClassNoise(array_wine[:, 1:], array_wine[:,0], 0.05)
+  b = addClassNoise(array_TTT[:, :-1], array_TTT[:,-1], 0.05)
+  c = addClassNoise(array_wine[:, 1:], array_wine[:,0], 0.05, True)
+  d = addClassNoise(array_TTT[:, :-1], array_TTT[:,-1], 0.05, True)
   print('done')
