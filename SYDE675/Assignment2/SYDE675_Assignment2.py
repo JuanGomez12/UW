@@ -29,10 +29,6 @@ except:
 else:
   print("Wine dataset file found locally")
 
-array_wine = df_wine.values
-
-
-
 # Now for the TTT dataset
 try:
   print("Getting the Tic-Tac-Toe dataset file locally")
@@ -45,10 +41,12 @@ except:
 else:
   print("Tic-Tac-Toe dataset file found locally")
 
+
+# Convert to numpy arrays
+array_wine = df_wine.values
 array_TTT = df_TTT.values
 
-#-------------------------------------------------------------------------------
-
+#---------------------------------------------------------------------------------------------------------------------------
 
 def entropyCalc(data, attribute = None):
   totalVals = data.shape[0]
@@ -64,6 +62,7 @@ def entropyCalc(data, attribute = None):
       entropy = entropy - (p * np.log2(p))
   return entropy
 
+#---------------------------------------------------------------------------------------------------------------------------
 
 def condEntropyCalc(data, classColumn, attribute, threshold):
   condEntropy=[]
@@ -75,6 +74,7 @@ def condEntropyCalc(data, classColumn, attribute, threshold):
   condEntropy.append(entropyCalc(dataset, classColumn) * p)
   return condEntropy
 
+#---------------------------------------------------------------------------------------------------------------------------
 
 def catCondEntropyCalc(data, classColumn, attribute):
   condEntropy=[]
@@ -85,6 +85,8 @@ def catCondEntropyCalc(data, classColumn, attribute):
     condEntropy.append(entropyCalc(dataset, classColumn) * p)
   return condEntropy
 
+#---------------------------------------------------------------------------------------------------------------------------
+
 def is_number(val):
   try:
     float(val) # for int, long, float and complex
@@ -92,8 +94,12 @@ def is_number(val):
     return False
   return True
 
+#---------------------------------------------------------------------------------------------------------------------------
+
 def is_numerical(data):
   return all([is_number(sample) for sample in data])
+
+#---------------------------------------------------------------------------------------------------------------------------
 
 def intrinsicVal(data, attribute, threshold = None):
   if threshold is None:
@@ -102,6 +108,8 @@ def intrinsicVal(data, attribute, threshold = None):
     dataCat = data[:, attribute] < threshold
   intrinsic = entropyCalc(dataCat)
   return intrinsic
+
+#---------------------------------------------------------------------------------------------------------------------------
 
 def bestEntropyCalc(data, classColumn, featsLeft, gain_ratio):
   bestAttribute = None
@@ -156,6 +164,8 @@ def bestEntropyCalc(data, classColumn, featsLeft, gain_ratio):
               print("Categorical: System entropy: {1:.2f}, best entropy: {3:.2f}, best attribute: {4:d}, data left: {2:d},  Attributes left: {0:d}".format(len(featsLeft), entropy, data.shape[0], bestInfoGain, bestAttribute))
   return bestAttribute, bestThreshold 
 
+#---------------------------------------------------------------------------------------------------------------------------
+
 def dataLeaver(dataSamples, bestAttr, bestThresh):
   if isinstance(bestThresh, np.ndarray):
     dataLeaves = []
@@ -167,6 +177,8 @@ def dataLeaver(dataSamples, bestAttr, bestThresh):
     dataLeaves = [leftData, rightData]
   dataLeaves = np.asarray(dataLeaves)
   return dataLeaves
+
+#---------------------------------------------------------------------------------------------------------------------------
 
 class DT:
   def __init__(self, featUsed = None, featsLeft = None, threshold = None, leaves = None, prediction = None):
@@ -238,7 +250,9 @@ class DT:
           if expectedLabels[j] == element:
             confusionMatrix[i, j] = count
     return confusionMatrix
-  
+
+#---------------------------------------------------------------------------------------------------------------------------  
+
 def decisionTree(dataSamplesX, dataSamplesY, feats_Left = None, gain_ratio = False):
   dataSamplesY = np.reshape(dataSamplesY,(-1,1))
   dataSamples = np.concatenate([dataSamplesX, dataSamplesY], axis = 1)
@@ -281,6 +295,8 @@ def decisionTree(dataSamplesX, dataSamplesY, feats_Left = None, gain_ratio = Fal
       dTree.leaves = list(leaves)
   return dTree
 
+#---------------------------------------------------------------------------------------------------------------------------
+
 def k_folder(data, folds = 10):
   """ Get the input data, with rows being the samples, and create the amount of folds selected.
   Attributes:
@@ -305,6 +321,8 @@ def k_folder(data, folds = 10):
   for i in range(folds - remainder): # iterate over the folds with less values
     datasplit.append(data[remainder * up_bound + i * low_bound : remainder * up_bound + (i + 1) * low_bound])
   return datasplit
+
+#---------------------------------------------------------------------------------------------------------------------------
   
 def trainTestTree(trainData, testData, gain_ratio = False):
   tree = decisionTree(trainData[:, :-1], trainData[:, -1], gain_ratio = gain_ratio)
@@ -315,178 +333,7 @@ def trainTestTree(trainData, testData, gain_ratio = False):
   accuracy = np.trace(confusionMat) / np.sum(confusionMat)
   return tree, accuracy, confusionMat
 
-def k_fold_crossval(dataX, dataY, folds = 10, gain_ratio = False):
-  dataY = np.reshape(dataY,(-1,1))
-  data = np.concatenate([dataX, dataY], axis = 1)
-  classColumn = data.shape[1] - 1
-
-  datasplit = k_folder(data, folds)
-  forest = []
-  accuracy = []
-  confMats = []
-  for i in range(folds):
-    data = list(datasplit)
-    test_data = data.pop(i)
-    train_data = np.concatenate((data), axis = 0)
-    tree, acc, confMat = trainTestTree(train_data, test_data, gain_ratio)
-    forest.append(tree)
-    accuracy.append(acc)
-    confMats.append(confMat)
-  return list(forest), list(accuracy), list(confMats)
-
-
-def plotConfMat(mat1, mat2, mat1Labels = None, mat2Labels = None, saveFig = False):
-  # Use pandas to create the column names and idx 
-  if mat1Labels is None:
-    mat1Labels = []
-    for i in range(mat1.shape[0]):
-      mat1Labels.append('C' + str(i + 1))
-  else:
-    pass
-
-  if mat2Labels is None:
-    mat2Labels = []
-    for i in range(mat2.shape[0]):
-      mat2Labels.append('C' + str(i + 1))
-  else:
-    pass
-  df_mat1 = pd.DataFrame(mat1, index = mat1Labels,
-                    columns = mat1Labels)
-  df_mat2 = pd.DataFrame(mat2, index = mat2Labels,
-                    columns = mat2Labels)
-
-  # Get the min and max values
-  vmin = min(df_mat1.values.min(), df_mat2.values.min())
-  vmax = max(df_mat1.values.max(), df_mat2.values.max())
-
-
-  fig, axs = plt.subplots(nrows = 1, ncols = 3,
-                        figsize = [20.0, 10.0],
-                        gridspec_kw = dict(width_ratios = [3, 2.8, 0.2]))
-
-  # Plot both heat maps
-  axs[0] = sns.heatmap(df_mat1, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = False, cmap = "summer", ax = axs[0])
-  axs[1] = sns.heatmap(df_mat2, vmin = vmin, vmax = vmax, yticklabels=False, annot = True, fmt = 'g', cbar = False, cmap = "summer", ax = axs[1])
-
-  # Configure aesthetics for ax 0
-  axs[0].xaxis.set_ticks_position('top')
-  axs[0].xaxis.set_tick_params(length = 0)
-  axs[0].set_title("Actual Values")
-  axs[0].set_xlabel("(a) Wine")
-  axs[0].set_ylabel("Predicted Values")
-
-  # Configure aesthetics for ax 1
-  axs[1].xaxis.set_ticks_position('top')
-  axs[1].xaxis.set_tick_params(length=0)
-  axs[1].set_title("Actual Values")
-  axs[1].set_xlabel("(b) Tic-Tac-Toe")
-
-  # Configure colorbar in ax 2
-  axs[2] = fig.colorbar(axs[0].collections[0], cax = axs[2])
-  fig.tight_layout()
-  if saveFig:
-    plt.savefig('ConfusionMatrix.png', bbox_inches = 'tight')
-  plt.show()
-
-if verbose and test:
-  # Test the tree creation
-  tree = decisionTree(array_wine[:,1:], array_wine[:,0], gain_ratio = True)
-  tree_TTT = decisionTree(array_TTT[:,:9], array_TTT[:,9], gain_ratio = True)
-  #print(tree.leaves[0].leaves[1].leaves[1].prediction) # Check if it is creating the tree correctly
-  print('wine prediction of val 20: ', tree.predict(array_wine[20, 1:]))
-  print('wine prediction of val 120: ', tree.predict(array_wine[120, 1:]))
-  print('TTT prediction of val 100: ', tree_TTT.predict(array_TTT[100, :9]))
-  print('TTT prediction of val 700: ', tree_TTT.predict(array_TTT[700, :9]))
-
-# Question 2 a)
-times = 10
-labels_wine = np.unique(array_wine[:, 0])
-labels_TTT = np.unique(array_TTT[:, 9])
-
-# First, using the wine dataset
-array = array_wine
-forests_wine = []
-accuracies_wine = []
-confMats_wine = []
-bestAcc = 0
-
-for i in range(times):
-  np.random.shuffle(array)
-  forest_wine, accuracy_wine, confMat_wine = k_fold_crossval(array[:,1:], array[:,0], gain_ratio = False)
-  forests_wine.append(forest_wine)
-  accuracies_wine += accuracy_wine
-  confMats_wine += confMat_wine
-bestConfMat_wine = confMats_wine[np.argmax(accuracies_wine)]
-
-# Now using the Tic-tac-toe dataset
-array = array_TTT
-forests_TTT = []
-accuracies_TTT = []
-confMats_TTT = []
-bestAcc = 0
-
-for i in range(10):
-  np.random.shuffle(array)
-  forest_TTT, accuracy_TTT, confMat_TTT= k_fold_crossval(array[:,:9], array[:,9], gain_ratio = False)
-  for j in range(times):
-    if accuracy_TTT[j] > bestAcc:
-      bestAcc = accuracy_TTT[j]
-      bestConfMat_TTT = confMat_TTT[j]
-  forests_TTT.append(forest_TTT)
-  accuracies_TTT += accuracy_TTT
-  confMats_TTT += confMat_TTT
-bestConfMat_TTT = confMats_TTT[np.argmax(accuracies_TTT)]
-
-print('--------------------------------------------------------------------------------------')
-print('Question 2. a)')
-print('Wine dataset accuracy: mean is {0:.2f}% and variance is {1:.4f}'.format(100 * np.mean(accuracies_wine), np.var(accuracies_wine)))
-print('Tic-tac-toe dataset accuracy: mean is {0:.2f}% and variance is {1:.4f}'.format(100 * np.mean(accuracies_TTT), np.var(accuracies_TTT)))
-
-plotConfMat(bestConfMat_wine, bestConfMat_TTT, labels_wine, labels_TTT, saveFig = saveResults)
-
-# Question 2 b)
-# Using the wine dataset
-array = array_wine
-forests_wine = []
-accuracies_wine = []
-confMats_wine = []
-bestAcc = 0
-
-for i in range(times):
-  np.random.shuffle(array)
-  forest_wine, accuracy_wine, confMat_wine = k_fold_crossval(array[:,1:], array[:,0], gain_ratio = True)
-  forests_wine.append(forest_wine)
-  accuracies_wine += accuracy_wine
-  confMats_wine += confMat_wine
-bestConfMat_wine = confMats_wine[np.argmax(accuracies_wine)]
-
-# Now using the Tic-tac-toe dataset
-array = array_TTT
-forests_TTT = []
-accuracies_TTT = []
-confMats_TTT = []
-bestAcc = 0
-
-for i in range(10):
-  np.random.shuffle(array)
-  forest_TTT, accuracy_TTT, confMat_TTT= k_fold_crossval(array[:,:9], array[:,9], gain_ratio = True)
-  for j in range(times):
-    if accuracy_TTT[j] > bestAcc:
-      bestAcc = accuracy_TTT[j]
-      bestConfMat_TTT = confMat_TTT[j]
-  forests_TTT.append(forest_TTT)
-  accuracies_TTT += accuracy_TTT
-  confMats_TTT += confMat_TTT
-bestConfMat_TTT = confMats_TTT[np.argmax(accuracies_TTT)]
-
-print('--------------------------------------------------------------------------------------')
-print('Question 2. b)')
-print('Wine dataset accuracy: mean is {0:.2f}% and variance is {1:.4f}'.format(100 * np.mean(accuracies_wine), np.var(accuracies_wine)))
-print('Tic-tac-toe dataset accuracy: mean is {0:.2f}% and variance is {1:.4f}'.format(100 * np.mean(accuracies_TTT), np.var(accuracies_TTT)))
-
-plotConfMat(bestConfMat_wine, bestConfMat_TTT, labels_wine, labels_TTT, saveFig = saveResults)
-
-# Question 3 A)
+#---------------------------------------------------------------------------------------------------------------------------
 
 from sklearn.preprocessing import StandardScaler
 def addAttrNoise(dataX, dataY, percentage):
@@ -581,14 +428,8 @@ def addAttrNoise(dataX, dataY, percentage):
   noisedUpData = np.concatenate([noisedUpData, dataY], axis = 1)
   return noisedUpData
 
+#---------------------------------------------------------------------------------------------------------------------------
 
-# Test the noise addition function
-if test:
-  w = addAttrNoise(array_wine[:, 1:], array_wine[:,0], 0.05)
-  w = addAttrNoise(array_TTT[:, :-1], array_TTT[:,-1], 0.05)
-  print('done')
-
-# Question 3 B)
 def addClassNoise(dataX, dataY, percentage, contradictory = False):
   #Contradictory examples. The same examples appear more than once and are labeled with different classifications  
   #Misclassifications. Instances are labeled with wrong classes. This type of errors is common in situations that different classes have similar sympto
@@ -647,6 +488,205 @@ def addClassNoise(dataX, dataY, percentage, contradictory = False):
   noisedUpData = noisedUpData[noisedUpData[:,0].argsort()]
   noisedUpData = np.delete(noisedUpData, 0, axis = 1) # Delete the index column
   return noisedUpData
+
+#---------------------------------------------------------------------------------------------------------------------------
+
+def k_fold_crossval(dataX, dataY, folds = 10, gain_ratio = False, dirtyTrain = False, 
+dirtyTest = False, attrNoisePerc = 0.05, dirtyClass = False, classNoisePerc = 0.05, contraClassNoise = False):
+  
+  if dirtyClass:
+    data = addClassNoise(dataX, dataY, classNoisePerc, contraClassNoise)
+  else:
+    dataY = np.reshape(dataY,(-1,1))
+    data = np.concatenate([dataX, dataY], axis = 1)
+
+  datasplit = k_folder(data, folds)
+  forest = []
+  accuracy = []
+  confMats = []
+  for i in range(folds):
+    data = list(datasplit) # Get the list of folds
+    test_data = data.pop(i) # Get and remove the respective test fold for the iteration
+    train_data = np.concatenate((data), axis = 0) # Concatenate the rest of the data
+    if dirtyTrain: # If you need to add atribute noise to the train data
+      train_data = addAttrNoise(train_data[:,:-1], train_data[:,-1], attrNoisePerc)
+    if dirtyTest: # If you need to add atribute noise to the test data
+      test_data = addAttrNoise(train_data[:,:-1], train_data[:,-1], attrNoisePerc)
+    tree, acc, confMat = trainTestTree(train_data, test_data, gain_ratio) # Train and get results
+    forest.append(tree)
+    accuracy.append(acc)
+    confMats.append(confMat)
+  return list(forest), list(accuracy), list(confMats)
+
+#---------------------------------------------------------------------------------------------------------------------------
+
+def repeated_k_fold(dataX, dataY, reps = 10, folds = 10, gain_ratio = False, dirtyTrain = False, 
+dirtyTest = False, attrNoisePerc = 0.05, dirtyClass = False, classNoisePerc = 0.05, contraClassNoise = False):
+  dataY = np.reshape(dataY,(-1,1))
+  data = np.concatenate([dataX, dataY], axis = 1)
+
+  forests = []
+  accuracies = []
+  confMats = []
+
+  for i in range(reps):
+    np.random.shuffle(data)
+    forest, accuracy, confMat = k_fold_crossval(data[:,:-1], data[:,-1], folds, gain_ratio,
+     dirtyTrain, dirtyTest, attrNoisePerc, dirtyClass,classNoisePerc, contraClassNoise)
+    forests.append(forest) # Calculating this in case it is needed in the future
+    accuracies += accuracy 
+    confMats += confMat
+  bestConfMat = confMats[np.argmax(accuracies)]
+  return list(accuracies), bestConfMat
+
+#---------------------------------------------------------------------------------------------------------------------------
+
+def plotConfMat(mat1, mat2, mat1Labels = None, mat2Labels = None, saveFig = False):
+  # Use pandas to create the column names and idx 
+  if mat1Labels is None:
+    mat1Labels = []
+    for i in range(mat1.shape[0]):
+      mat1Labels.append('C' + str(i + 1))
+  else:
+    pass
+
+  if mat2Labels is None:
+    mat2Labels = []
+    for i in range(mat2.shape[0]):
+      mat2Labels.append('C' + str(i + 1))
+  else:
+    pass
+  df_mat1 = pd.DataFrame(mat1, index = mat1Labels,
+                    columns = mat1Labels)
+  df_mat2 = pd.DataFrame(mat2, index = mat2Labels,
+                    columns = mat2Labels)
+
+  # Get the min and max values
+  vmin = min(df_mat1.values.min(), df_mat2.values.min())
+  vmax = max(df_mat1.values.max(), df_mat2.values.max())
+
+
+  fig, axs = plt.subplots(nrows = 1, ncols = 3,
+                        figsize = [20.0, 10.0],
+                        gridspec_kw = dict(width_ratios = [3, 2.8, 0.2]))
+
+  # Plot both heat maps
+  axs[0] = sns.heatmap(df_mat1, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = False, cmap = "summer", ax = axs[0])
+  axs[1] = sns.heatmap(df_mat2, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = False, cmap = "summer", ax = axs[1])
+
+  # Configure aesthetics for ax 0
+  axs[0].xaxis.set_ticks_position('top')
+  axs[0].xaxis.set_tick_params(length = 0)
+  axs[0].set_title("Actual Values")
+  axs[0].set_xlabel("(a) Wine")
+  axs[0].set_ylabel("Predicted Values")
+
+  # Configure aesthetics for ax 1
+  axs[1].xaxis.set_ticks_position('top')
+  axs[1].xaxis.set_tick_params(length=0)
+  axs[1].set_title("Actual Values")
+  axs[1].set_xlabel("(b) Tic-Tac-Toe")
+
+  # Configure colorbar in ax 2
+  axs[2] = fig.colorbar(axs[0].collections[0], cax = axs[2])
+  fig.tight_layout()
+  if saveFig:
+    plt.savefig('ConfusionMatrix.png', bbox_inches = 'tight')
+  plt.show()
+
+#---------------------------------------------------------------------------------------------------------------------------
+
+if verbose and test:
+  # Test the tree creation
+  tree = decisionTree(array_wine[:,1:], array_wine[:,0], gain_ratio = True)
+  tree_TTT = decisionTree(array_TTT[:,:9], array_TTT[:,9], gain_ratio = True)
+  print('wine prediction of val 20: ', tree.predict(array_wine[20, 1:]))
+  print('wine prediction of val 120: ', tree.predict(array_wine[120, 1:]))
+  print('TTT prediction of val 100: ', tree_TTT.predict(array_TTT[100, :9]))
+  print('TTT prediction of val 700: ', tree_TTT.predict(array_TTT[700, :9]))
+
+# Question 2 a)
+labels_wine = np.unique(array_wine[:, 0])
+labels_TTT = np.unique(array_TTT[:, 9])
+
+# First, using the wine dataset
+
+accuracies_wine_IG, bestConfMat_wine_IG = repeated_k_fold(array_wine[:,1:], array_wine[:,0])
+
+# Now using the Tic-tac-toe dataset
+
+accuracies_TTT_IG, bestConfMat_TTT_IG = repeated_k_fold(array_TTT[:,:9], array_TTT[:,9])
+
+# ----------------------------------------------------------------------------------------------------------
+# Question 2 b)
+# Using the wine dataset
+
+accuracies_wine_GR, bestConfMat_wine_GR = repeated_k_fold(array_wine[:,1:], array_wine[:,0], gain_ratio = True)
+
+# Now using the Tic-tac-toe dataset
+
+accuracies_TTT_GR, bestConfMat_TTT_GR = repeated_k_fold(array_TTT[:,:9], array_TTT[:,9], gain_ratio = True)
+
+# Printing the results
+print('--------------------------------------------------------------------------------------')
+print('Question 2. a)')
+print('The mean accuracy for the wine decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_wine_IG), np.var(accuracies_wine_IG)))
+print('The mean accuracy for the Tic-tac-toe decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_TTT_IG), np.var(accuracies_TTT_IG)))
+
+plotConfMat(bestConfMat_wine_IG, bestConfMat_TTT_IG, labels_wine, labels_TTT, saveFig = saveResults)
+
+print('--------------------------------------------------------------------------------------')
+print('Question 2. b)')
+print('The mean accuracy for the wine decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_wine_GR), np.var(accuracies_wine_GR)))
+print('The mean accuracy for the Tic-tac-toe decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_TTT_GR), np.var(accuracies_TTT_GR)))
+
+plotConfMat(bestConfMat_wine_GR, bestConfMat_TTT_GR, labels_wine, labels_TTT, saveFig = saveResults)
+
+# Question 3 A)
+
+# To make the data more easy to manage, let's move the class column to the end of both datasets
+wine = np.concatenate([array_wine[:, 1:], np.reshape(array_wine[:,0],(-1,1))], axis = 1)
+TTT = array_TTT
+
+CxC = []
+DxC = []
+CxD = []
+DxD = []
+
+datasets = [wine, TTT]
+percentages = [0.05, 0.1, 0.15]
+
+for i in range(len(datasets)):
+  CxC_temp = []
+  DxC_temp = []
+  CxD_temp = []
+  DxD_temp = []
+  for perc in percentages:
+    dataset = datasets[i]
+    accuracies = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = False, 
+    dirtyTest = False, attrNoisePerc = perc)[0]
+    CxC_temp.append(np.mean(accuracies))
+
+    accuracies = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = True, 
+    dirtyTest = False, attrNoisePerc = perc)[0]
+    DxC_temp.append(np.mean(accuracies))
+
+    accuracies = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = False, 
+    dirtyTest = True, attrNoisePerc = perc)[0]
+    CxD_temp.append(np.mean(accuracies))
+
+    accuracies = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = True, 
+    dirtyTest = True, attrNoisePerc = perc)[0]
+    DxD_temp.append(np.mean(accuracies))
+  CxC.append(CxC_temp)
+  DxC.append(DxC_temp)
+  CxD.append(CxD_temp)
+  DxD.append(DxD_temp)
+
+
+
+# Question 3 B)
+
 
 if test:
   a = addClassNoise(array_wine[:, 1:], array_wine[:,0], 0.05)
