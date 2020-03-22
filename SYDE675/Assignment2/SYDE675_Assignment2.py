@@ -350,8 +350,9 @@ def addAttrNoise(dataX, dataY, percentage):
       noisedUpData: One joined dataset with the respective noise and the class column 
         as the last column of the dataset
   """
+  # Reshape dataY
   dataY = np.reshape(dataY, (-1,1))
-  
+
   # Find which values are categories (and what are they), and which aren't categories
   numericalVals = []
   categories = []
@@ -374,16 +375,12 @@ def addAttrNoise(dataX, dataY, percentage):
   # Set the sample size
   sample_size = dataX.shape[0]
 
-  # Create an index for the data
-  index = np.arange(sample_size)
-  index = index[np.newaxis].T
-
   # Set the divider using a uniform distr., for selecting the attributes to add noise
   divider = np.random.uniform(size = sample_size)
   divider = divider[np.newaxis].T
 
   # Add the divider and the index to the dataset
-  totalSamples = np.concatenate([index, data_scaled, divider], axis = 1)
+  totalSamples = np.concatenate([data_scaled, dataY, divider], axis = 1)
 
   # Separate the data into clean and soon to be noisy
   noisyData = totalSamples[totalSamples[:,-1] <= percentage]
@@ -393,25 +390,22 @@ def addAttrNoise(dataX, dataY, percentage):
   noisyData = noisyData[:, :-1]
   cleanData = cleanData[:, :-1]
 
-  count = 0 # To see how many values were modified
-
   # Add noise to each value
   for val in range(noisyData.shape[0]):
     # Add noise to each attr
-    for attr in range(1, noisyData.shape[1]): # Starts in 1 so as to not add noise to the index
+    for attr in range(noisyData.shape[1] - 1): # Starts in 1 so as to not add noise to the index
       # addNoise = np.random.randint(2) # Decide if the attribute will have noise added
-      addNoise = True # For now 'leave it always on'
+      addNoise = True # For now leave it 'always on'
       if addNoise:
-        count += 1
         if verbose:
           print('Adding noise to attr:', attr, 'in val:', val, 'with a value of:', noisyData[val, attr])
         # Check if the data is numerical or categorical
-        if numericalVals[attr - 1]: # If the data is numerical
+        if numericalVals[attr]: # If the data is numerical
           noise = np.random.normal()
           noisyData[val, attr] = noisyData[val, attr] + noise
         else:
          # It is a categorical value
-          cats = categories[attr - 1] # Retrieve the labels for the attribute
+          cats = categories[attr] # Retrieve the labels for the attribute
           noisyVal = cats[np.random.randint(cats.shape[0])] # Select randomly one of the labels
           # Assign it to the value in the data
           noisyData[val, attr] = noisyVal
@@ -420,15 +414,10 @@ def addAttrNoise(dataX, dataY, percentage):
 
   # Rebuild the dataset
   noisedUpData = np.concatenate([noisyData, cleanData], axis = 0)
-  # noisedUpData = np.delete(noisedUpData, noisedUpData.shape[1] - 1, axis = 1) # Delete the divider
-  noisedUpData = noisedUpData[noisedUpData[:,0].argsort()]
-  noisedUpData = np.delete(noisedUpData, 0, axis = 1) # Delete the index column
   if all(numericalVals):
-    noisedUpData = dataScaler.inverse_transform(noisedUpData) # Unscale the data
-  if verbose:
-    print('Total vals changed:', count)
-  # noisedUpData = noisedUpData[noisedUpData[:,0].argsort()]
-  noisedUpData = np.concatenate([noisedUpData, dataY], axis = 1)
+    dataY = np.reshape(noisedUpData[:, -1], (-1,1)) # Extract the classes
+    noisedUpData = dataScaler.inverse_transform(noisedUpData[:,:-1]) # Unscale the data
+    noisedUpData = np.concatenate([noisedUpData, dataY], axis = 1) # Readd the classes
   return noisedUpData
 
 #---------------------------------------------------------------------------------------------------------------------------
@@ -651,7 +640,7 @@ if Q2:
 
 # First the plotting functions
 import matplotlib.ticker as mtick
-def plotConfMat(data, percentages, saveFig = False):
+def plotNoiseAttr(data, percentages, saveFig = False):
   fig, axs = plt.subplots(nrows = 1, ncols = 2, sharey = True, figsize = [20.0, 10.0], gridspec_kw = {'wspace':0.04, 'hspace':0})
 
   colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'] # colors to use for the plot
@@ -681,13 +670,6 @@ def plotConfMat(data, percentages, saveFig = False):
   if saveFig:
       plt.savefig('AccuracyVSNoise.png', bbox_inches = 'tight')
   plt.show()
-  
-
-# fig, axs = plt.subplots(nrows = 1, ncols = 2, figsize = [20.0, 10.0])
-# fig.tight_layout()
-# if saveFig:
-#     plt.savefig('ConfusionMatrix.png', bbox_inches = 'tight')
-# plt.show()
 
 if Q3:
   # To make the data more easy to manage, let's move the class column to the end of both datasets
@@ -730,6 +712,7 @@ if Q3:
     DxD.append(DxD_temp)
 
 data = [CxC, DxC, CxD, DxD]
+plotNoiseAttr(data, percentages)
 
 # For the wine dataset
 
