@@ -16,6 +16,8 @@ sns.set_context("talk") # Make the font of the plots bigger
 verbose = False
 test = True
 saveResults = False
+Q2 = False
+Q3 = True
 
 # Try getting the file locally, if not found try it online
 try:
@@ -349,6 +351,7 @@ def addAttrNoise(dataX, dataY, percentage):
         as the last column of the dataset
   """
   dataY = np.reshape(dataY, (-1,1))
+  
   # Find which values are categories (and what are they), and which aren't categories
   numericalVals = []
   categories = []
@@ -511,7 +514,7 @@ dirtyTest = False, attrNoisePerc = 0.05, dirtyClass = False, classNoisePerc = 0.
     if dirtyTrain: # If you need to add atribute noise to the train data
       train_data = addAttrNoise(train_data[:,:-1], train_data[:,-1], attrNoisePerc)
     if dirtyTest: # If you need to add atribute noise to the test data
-      test_data = addAttrNoise(train_data[:,:-1], train_data[:,-1], attrNoisePerc)
+      test_data = addAttrNoise(test_data[:,:-1], test_data[:,-1], attrNoisePerc)
     tree, acc, confMat = trainTestTree(train_data, test_data, gain_ratio) # Train and get results
     forest.append(tree)
     accuracy.append(acc)
@@ -605,85 +608,130 @@ if verbose and test:
   print('TTT prediction of val 100: ', tree_TTT.predict(array_TTT[100, :9]))
   print('TTT prediction of val 700: ', tree_TTT.predict(array_TTT[700, :9]))
 
+
 # Question 2 a)
-labels_wine = np.unique(array_wine[:, 0])
-labels_TTT = np.unique(array_TTT[:, 9])
+if Q2:
+  labels_wine = np.unique(array_wine[:, 0])
+  labels_TTT = np.unique(array_TTT[:, 9])
 
-# First, using the wine dataset
+  # First, using the wine dataset
 
-accuracies_wine_IG, bestConfMat_wine_IG = repeated_k_fold(array_wine[:,1:], array_wine[:,0])
+  accuracies_wine_IG, bestConfMat_wine_IG = repeated_k_fold(array_wine[:,1:], array_wine[:,0])
 
-# Now using the Tic-tac-toe dataset
+  # Now using the Tic-tac-toe dataset
 
-accuracies_TTT_IG, bestConfMat_TTT_IG = repeated_k_fold(array_TTT[:,:9], array_TTT[:,9])
+  accuracies_TTT_IG, bestConfMat_TTT_IG = repeated_k_fold(array_TTT[:,:9], array_TTT[:,9])
 
-# ----------------------------------------------------------------------------------------------------------
-# Question 2 b)
-# Using the wine dataset
+  # ----------------------------------------------------------------------------------------------------------
+  # Question 2 b)
+  # Using the wine dataset
 
-accuracies_wine_GR, bestConfMat_wine_GR = repeated_k_fold(array_wine[:,1:], array_wine[:,0], gain_ratio = True)
+  accuracies_wine_GR, bestConfMat_wine_GR = repeated_k_fold(array_wine[:,1:], array_wine[:,0], gain_ratio = True)
 
-# Now using the Tic-tac-toe dataset
+  # Now using the Tic-tac-toe dataset
 
-accuracies_TTT_GR, bestConfMat_TTT_GR = repeated_k_fold(array_TTT[:,:9], array_TTT[:,9], gain_ratio = True)
+  accuracies_TTT_GR, bestConfMat_TTT_GR = repeated_k_fold(array_TTT[:,:9], array_TTT[:,9], gain_ratio = True)
 
-# Printing the results
-print('--------------------------------------------------------------------------------------')
-print('Question 2. a)')
-print('The mean accuracy for the wine decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_wine_IG), np.var(accuracies_wine_IG)))
-print('The mean accuracy for the Tic-tac-toe decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_TTT_IG), np.var(accuracies_TTT_IG)))
+  # Printing the results
+  print('--------------------------------------------------------------------------------------')
+  print('Question 2. a)')
+  print('The mean accuracy for the wine decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_wine_IG), np.var(accuracies_wine_IG)))
+  print('The mean accuracy for the Tic-tac-toe decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_TTT_IG), np.var(accuracies_TTT_IG)))
 
-plotConfMat(bestConfMat_wine_IG, bestConfMat_TTT_IG, labels_wine, labels_TTT, saveFig = saveResults)
+  plotConfMat(bestConfMat_wine_IG, bestConfMat_TTT_IG, labels_wine, labels_TTT, saveFig = saveResults)
 
-print('--------------------------------------------------------------------------------------')
-print('Question 2. b)')
-print('The mean accuracy for the wine decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_wine_GR), np.var(accuracies_wine_GR)))
-print('The mean accuracy for the Tic-tac-toe decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_TTT_GR), np.var(accuracies_TTT_GR)))
+  print('--------------------------------------------------------------------------------------')
+  print('Question 2. b)')
+  print('The mean accuracy for the wine decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_wine_GR), np.var(accuracies_wine_GR)))
+  print('The mean accuracy for the Tic-tac-toe decision tree was {0:.2f}% and its variance was {1:.4f}'.format(100 * np.mean(accuracies_TTT_GR), np.var(accuracies_TTT_GR)))
 
-plotConfMat(bestConfMat_wine_GR, bestConfMat_TTT_GR, labels_wine, labels_TTT, saveFig = saveResults)
+  plotConfMat(bestConfMat_wine_GR, bestConfMat_TTT_GR, labels_wine, labels_TTT, saveFig = saveResults)
 
 # Question 3 A)
 
-# To make the data more easy to manage, let's move the class column to the end of both datasets
-wine = np.concatenate([array_wine[:, 1:], np.reshape(array_wine[:,0],(-1,1))], axis = 1)
-TTT = array_TTT
+# First the plotting functions
+import matplotlib.ticker as mtick
+def plotConfMat(data, percentages, saveFig = False):
+  fig, axs = plt.subplots(nrows = 1, ncols = 2, sharey = True, figsize = [20.0, 10.0], gridspec_kw = {'wspace':0.04, 'hspace':0})
 
-CxC = []
-DxC = []
-CxD = []
-DxD = []
+  colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'] # colors to use for the plot
+  categories = ['CxC', 'DxC', 'CxD', 'DxD'] # labels to use for the plot
 
-datasets = [wine, TTT]
-percentages = [0.05, 0.1, 0.15]
-
-for i in range(len(datasets)):
-  CxC_temp = []
-  DxC_temp = []
-  CxD_temp = []
-  DxD_temp = []
-  for perc in percentages:
-    dataset = datasets[i]
-    accuracies = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = False, 
-    dirtyTest = False, attrNoisePerc = perc)[0]
-    CxC_temp.append(np.mean(accuracies))
-
-    accuracies = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = True, 
-    dirtyTest = False, attrNoisePerc = perc)[0]
-    DxC_temp.append(np.mean(accuracies))
-
-    accuracies = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = False, 
-    dirtyTest = True, attrNoisePerc = perc)[0]
-    CxD_temp.append(np.mean(accuracies))
-
-    accuracies = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = True, 
-    dirtyTest = True, attrNoisePerc = perc)[0]
-    DxD_temp.append(np.mean(accuracies))
-  CxC.append(CxC_temp)
-  DxC.append(DxC_temp)
-  CxD.append(CxD_temp)
-  DxD.append(DxD_temp)
+  for i in range(len(data)): # iterate over the CxC, DxC, CxD, DxD categories
+    cat = data[i]
+    for j in range(len(cat)): # iterate over dataset
+      axs[j].plot(percentages, cat[j], color = colors[i], label = categories[i])
 
 
+  # Configure aesthetics for ax 0
+  axs[0].set_xlabel("Noise Percentage" "\n" "\n" "(a) Wine dataset")
+  axs[0].set_ylabel("Accuracy")
+  axs[0].xaxis.set_major_formatter(mtick.PercentFormatter(xmax = 1))
+  axs[0].yaxis.set_major_formatter(mtick.PercentFormatter(xmax = 1))
+
+  # Configure aesthetics for ax 1
+  axs[1].set_xlabel("Noise Percentage" "\n" "\n" "(b) Tic-Tac-Toe dataset")
+  axs[1].xaxis.set_major_formatter(mtick.PercentFormatter(xmax = 1))
+  axs[1].yaxis.set_major_formatter(mtick.PercentFormatter(xmax = 1))
+
+  # Set the legend
+  axs[0].legend(ncol = 4, loc = 'center', fontsize = 'small',columnspacing = 0.8, handlelength=1.5, bbox_to_anchor = (1.02, -0.1))
+
+  # fig.tight_layout()
+  if saveFig:
+      plt.savefig('AccuracyVSNoise.png', bbox_inches = 'tight')
+  plt.show()
+  
+
+# fig, axs = plt.subplots(nrows = 1, ncols = 2, figsize = [20.0, 10.0])
+# fig.tight_layout()
+# if saveFig:
+#     plt.savefig('ConfusionMatrix.png', bbox_inches = 'tight')
+# plt.show()
+
+if Q3:
+  # To make the data more easy to manage, let's move the class column to the end of both datasets
+  wine = np.concatenate([array_wine[:, 1:], np.reshape(array_wine[:,0],(-1,1))], axis = 1)
+  TTT = array_TTT
+
+  CxC = []
+  DxC = []
+  CxD = []
+  DxD = []
+
+  datasets = [wine, TTT]
+  percentages = [0.05, 0.1, 0.15]
+
+  for i in range(len(datasets)):
+    CxC_temp = []
+    DxC_temp = []
+    CxD_temp = []
+    DxD_temp = []
+    for perc in percentages:
+      dataset = datasets[i]
+      accuraciesCxC = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = False, 
+      dirtyTest = False, attrNoisePerc = perc)[0]
+      CxC_temp.append(np.mean(accuraciesCxC))
+
+      accuraciesDxC = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = True, 
+      dirtyTest = False, attrNoisePerc = perc)[0]
+      DxC_temp.append(np.mean(accuraciesDxC))
+
+      accuraciesCxD = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = False, 
+      dirtyTest = True, attrNoisePerc = perc)[0]
+      CxD_temp.append(np.mean(accuraciesCxD))
+
+      accuraciesDxD = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, dirtyTrain = True, 
+      dirtyTest = True, attrNoisePerc = perc)[0]
+      DxD_temp.append(np.mean(accuraciesDxD))
+    CxC.append(CxC_temp)
+    DxC.append(DxC_temp)
+    CxD.append(CxD_temp)
+    DxD.append(DxD_temp)
+
+data = [CxC, DxC, CxD, DxD]
+
+# For the wine dataset
 
 # Question 3 B)
 
