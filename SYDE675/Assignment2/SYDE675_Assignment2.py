@@ -17,7 +17,8 @@ verbose = False
 test = True
 saveResults = False
 Q2 = False
-Q3 = True
+Q3A = False
+Q3B = True
 
 # Try getting the file locally, if not found try it online
 try:
@@ -256,8 +257,8 @@ class DT:
 #---------------------------------------------------------------------------------------------------------------------------  
 
 def decisionTree(dataSamplesX, dataSamplesY, feats_Left = None, gain_ratio = False):
-  dataSamplesY = np.reshape(dataSamplesY,(-1,1))
-  dataSamples = np.concatenate([dataSamplesX, dataSamplesY], axis = 1)
+  dataSamplesY_T = np.reshape(dataSamplesY,(-1,1))
+  dataSamples = np.concatenate([dataSamplesX, dataSamplesY_T], axis = 1)
   classColumn = dataSamples.shape[1] - 1
   dTree = DT()
   if feats_Left is not None:
@@ -265,23 +266,21 @@ def decisionTree(dataSamplesX, dataSamplesY, feats_Left = None, gain_ratio = Fal
   else:
     featsLeft = np.arange(dataSamplesX.shape[1]).tolist()
   
-  #if all examples are of one specific class, set the class as the prediction of the tree
-  if len(np.unique((dataSamples)[:, classColumn])) == 1:
-    dTree.prediction = dataSamples[0, classColumn]
+  # if all examples are of one specific class, set the class as the prediction of the tree
+  if len(np.unique(dataSamplesY)) == 1:
+    dTree.prediction = dataSamplesY[0]
     return dTree
+  # Get the mode of the dataset
+  classList = dataSamplesY.tolist()
+  dTree.prediction = max(set(classList), key = classList.count)
   # if number of predicting attributes is empty then return root with the label being the mode of the labels
   if dataSamples.shape[1] <= 1:
-    # Get the mode of the dataset
-    classList = dataSamples[:, classColumn].tolist()
-    dTree.prediction = max(set(classList), key = classList.count)
     return dTree
   else:
     bestAttr, bestThresh = bestEntropyCalc(dataSamples, classColumn, featsLeft, gain_ratio)
     dTree.featUsed = bestAttr
     dTree.threshold = bestThresh
 
-    classList = dataSamples[:, classColumn].tolist()
-    dTree.prediction = max(set(classList), key = classList.count)
     if bestAttr is not None and bestThresh is not None:
       featsLeft.remove(bestAttr)
       dTree.featsLeft = featsLeft
@@ -328,9 +327,6 @@ def k_folder(data, folds = 10):
   
 def trainTestTree(trainData, testData, gain_ratio = False):
   tree = decisionTree(trainData[:, :-1], trainData[:, -1], gain_ratio = gain_ratio)
-  correctPredictions = 0
-  totalValues = testData.shape[0]
-  #use unique to filter the possible classes, loop thru them after filtering and get the relevant info to create the confusion matrix
   confusionMat = tree.confusionMat(testData)
   accuracy = np.trace(confusionMat) / np.sum(confusionMat)
   return tree, accuracy, confusionMat
@@ -393,7 +389,7 @@ def addAttrNoise(dataX, dataY, percentage):
   # Add noise to each value
   for val in range(noisyData.shape[0]):
     # Add noise to each attr
-    for attr in range(noisyData.shape[1] - 1): # Starts in 1 so as to not add noise to the index
+    for attr in range(noisyData.shape[1] - 1):
       # addNoise = np.random.randint(2) # Decide if the attribute will have noise added
       addNoise = True # For now leave it 'always on'
       if addNoise:
@@ -432,16 +428,12 @@ def addClassNoise(dataX, dataY, percentage, contradictory = False):
   # Set the sample size
   sample_size = dataX.shape[0]
 
-  # Create an index for the data
-  index = np.arange(sample_size)
-  index = index[np.newaxis].T
-
   # Set the divider using a uniform distr., for selecting the attributes to add noise
   divider = np.random.uniform(size = sample_size)
   divider = divider[np.newaxis].T
 
   # Add the divider and the index to the dataset
-  totalSamples = np.concatenate([index, dataX, dataY, divider], axis = 1)
+  totalSamples = np.concatenate([dataX, dataY, divider], axis = 1)
 
   # Separate the data into clean and soon to be noisy
   noisyData = totalSamples[totalSamples[:,-1] <= percentage]
@@ -474,11 +466,10 @@ def addClassNoise(dataX, dataY, percentage, contradictory = False):
 
   # Rebuild the dataset
   if contradictory: # If creating contradictory samples
-    noisyData = np.concatenate([noisyData, duplicateData], axis = 0)
-  noisedUpData = np.concatenate([noisyData, cleanData], axis = 0)
-  # noisedUpData = np.delete(noisedUpData, noisedUpData.shape[1] - 1, axis = 1) # Delete the divider
-  noisedUpData = noisedUpData[noisedUpData[:,0].argsort()]
-  noisedUpData = np.delete(noisedUpData, 0, axis = 1) # Delete the index column
+    noisyTotalData = np.concatenate([noisyData, duplicateData], axis = 0)
+  else:
+    noisyTotalData = np.copy(noisyData)
+  noisedUpData = np.concatenate([noisyTotalData, cleanData], axis = 0)
   return noisedUpData
 
 #---------------------------------------------------------------------------------------------------------------------------
@@ -640,16 +631,15 @@ if Q2:
 
 # First the plotting functions
 import matplotlib.ticker as mtick
-def plotNoiseAttr(data, percentages, saveFig = False):
+def plotNoise(data, percentages, labels, saveFig = False):
   fig, axs = plt.subplots(nrows = 1, ncols = 2, sharey = True, figsize = [20.0, 10.0], gridspec_kw = {'wspace':0.04, 'hspace':0})
 
   colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'] # colors to use for the plot
-  categories = ['CxC', 'DxC', 'CxD', 'DxD'] # labels to use for the plot
 
   for i in range(len(data)): # iterate over the CxC, DxC, CxD, DxD categories
     cat = data[i]
     for j in range(len(cat)): # iterate over dataset
-      axs[j].plot(percentages, cat[j], color = colors[i], label = categories[i])
+      axs[j].plot(percentages, cat[j], color = colors[i], label = labels[i])
 
 
   # Configure aesthetics for ax 0
@@ -671,11 +661,11 @@ def plotNoiseAttr(data, percentages, saveFig = False):
       plt.savefig('AccuracyVSNoise.png', bbox_inches = 'tight')
   plt.show()
 
-if Q3:
-  # To make the data more easy to manage, let's move the class column to the end of both datasets
-  wine = np.concatenate([array_wine[:, 1:], np.reshape(array_wine[:,0],(-1,1))], axis = 1)
-  TTT = array_TTT
+# To make the data more easy to manage, let's move the class column to the end of both datasets
+wine = np.concatenate([array_wine[:, 1:], np.reshape(array_wine[:,0],(-1,1))], axis = 1)
+TTT = array_TTT
 
+if Q3A:
   CxC = []
   DxC = []
   CxD = []
@@ -710,14 +700,38 @@ if Q3:
     DxC.append(DxC_temp)
     CxD.append(CxD_temp)
     DxD.append(DxD_temp)
+  # Plot the results
+  data = [CxC, DxC, CxD, DxD]
+  categories = ['CxC', 'DxC', 'CxD', 'DxD'] # labels to use for the plot
+  plotNoise(data, percentages, categories)
 
-data = [CxC, DxC, CxD, DxD]
-plotNoiseAttr(data, percentages)
-
-# For the wine dataset
 
 # Question 3 B)
+if Q3B:
+  datasets = [wine, TTT]
+  percentages = [0.05, 0.1, 0.15]
 
+  contradictory = []
+  missclass = []
+
+  for i in range(len(datasets)):
+    contradictory_temp = []
+    missclass_temp = []
+    for perc in percentages:
+      dataset = datasets[i]
+      accuraciesContradictory = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False,
+      dirtyClass = True, classNoisePerc = perc, contraClassNoise = True)[0]
+      contradictory_temp.append(np.mean(accuraciesContradictory))
+
+      accuraciesMissclass = repeated_k_fold(dataset[:,:-1], dataset[:,-1], reps = 10, folds = 10, gain_ratio = False, 
+      dirtyClass = False, classNoisePerc = perc, contraClassNoise = False)[0]
+      missclass_temp.append(np.mean(accuraciesMissclass))
+    contradictory.append(contradictory_temp)
+    missclass.append(missclass_temp)
+  # Plot the results  
+  data = [contradictory, missclass]
+  categories = ['Contradictory Examples', 'Missclassifications'] # labels to use for the plot
+  plotNoise(data, percentages, categories)
 
 if test:
   a = addClassNoise(array_wine[:, 1:], array_wine[:,0], 0.05)
