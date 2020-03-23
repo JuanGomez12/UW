@@ -672,7 +672,7 @@ if Q3A:
   DxD = []
 
   datasets = [wine, TTT]
-  percentages = [0.05, 0.1, 0.15]
+  percentages = list(np.arange(0.05, 0.2, 0.05)) # Define the percentages to be used
 
   for i in range(len(datasets)):
     CxC_temp = []
@@ -708,8 +708,8 @@ if Q3A:
 
 # Question 3 B)
 if Q3B:
-  datasets = [wine, TTT]
-  percentages = [0.05, 0.1, 0.15]
+  datasets = [wine, TTT] # Define the datasets
+  percentages = list(np.arange(0.05, 0.2, 0.05)) # Define the percentages
 
   contradictory = []
   missclass = []
