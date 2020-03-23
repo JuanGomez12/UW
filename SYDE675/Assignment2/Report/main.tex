@@ -1,0 +1,113 @@
+% Template for ICIP-2019 paper; to be used with:
+%          spconf.sty  - ICASSP/ICIP LaTeX style file, and
+%          IEEEbib.bst - IEEE bibliography style file.
+% --------------------------------------------------------------------------
+\documentclass{article}
+\usepackage{physics}
+\usepackage{spconf,amsmath, amssymb, graphicx, url}
+\usepackage{enumitem, booktabs, multirow}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{arydshln}
+
+% \usepackage{caption}
+% \captionsetup[table]{justification=centerlast,
+%                      labelsep=newline,
+%                      font=sf,
+%                      textfont=footnotesize}
+% \captionsetup[figure]{justification=centerlast,
+%                      font=sf,
+%                      textfont=footnotesize}
+
+\renewcommand\thetable{\Roman{table}} %Make the table's captions Roman numerals
+% \setlength{\parskip}{0.1em}
+
+%\parskip 0.2in %Separation between paragraphs
+% Example definitions.
+% --------------------
+\def\x{{\mathbf x}}
+\def\L{{\cal L}}
+\def\-{\raisebox{.75pt}{-}}
+% \renewcommand\thesubsection{\alph{subsection}} %Change subsection from using arabic to alphabetical numbering
+% Title.
+% ------
+\title{System Design SYDE-675 Assignment 2}
+%
+% Single address.
+% ---------------
+\name{Gomez Gonzalez, Juan M.}
+% For example:
+% ------------
+\address{University of Waterloo\\
+	Department of Electrical and Computer Engineering\\
+	200 University Ave W, Waterloo, ON N2L 3G1, Canada}
+%
+% Two addresses (uncomment and modify for two-address case).
+% ----------------------------------------------------------
+% \twoauthors
+%   {Gomez Gonzalez, Juan M. \textsuperscript{1}}
+% 	{\small \textsuperscript{1} Dept. of Electrical and Computer Engineering, University of Waterloo, CA. \\
+% 	\small \textsuperscript{2} Dept. of Mechanics and Ocean Engineering, Hamburg University of Technology, DE.}
+%   {}
+% 	{}
+
+\begin{document}
+%\ninept
+%
+\maketitle
+
+\begin{abstract}
+\ninept
+\textbf{
+This document answers the second assignment for the System Design course SYDE-675, which was taught during the Winter of 2020 at University of Waterloo. It is based on the solutions found using Python, which can be found accompanying this document.
+This assignment covers topics including decision trees, ID3 algorithm, C4.5 algorithm, and attribute and class noise.
+} 
+\end{abstract}
+%
+\begin{keywords}
+\ninept
+Decision trees, ID3, C4.5, attribute noise, class noise.
+\end{keywords} 
+
+
+\section{Question 2: Decision trees}
+Question 2 involves the creation of decision trees using Information Gain and Gain Ratio, which will be explained in the following subsections. The creation of these trees was done using the wine dataset and the tic-tac-toe dataset.
+
+The wine dataset.... FIND REF
+The tic-tac-toe dataset consisted of... FIND REF
+
+\subsection{Question a: ID3 decision tree using Information Gain}
+\label{subsec:Q1A}
+For this question, a decision tree using the ID3 algorithm and Information Gain as the metric for separating the data was used. The average accuracy and its variance, as well as plotting the confusion matrix of the best performing tree for each dataset was required.
+The basic idea for constructing a decision tree using ID3 is to find the attribute from the dataset that better splits the data into a more homogeneous selection, such that at the end it is possible to get a subset of the original data with only one class or label. This attribute selection is done through the use of entropy and Information Gain, that measures the capacity a specific attribute separates the data into different bins \cite{ID3Algo}. The entropy of a dataset can be calculated using Eq. \ref{eq:Q1A_Entropy}, where $S$ is the collection of c outcomes and $p(I)$ is the proportion of samples belonging to class I.
+
+\begin{align}
+    \label{eq:Q1A_Entropy}
+    Entropy(S) &= -\sum_{i=1}^{c}p(I) log_2 p(I)
+\end{align}
+
+Furthermore, Eq. \ref{eq:Q1A_InfoGain} can be used to calculate the information gained by splitting a dataset on a specific attribute. In this equation, $S_V$ is the subset of $S$ for which the attribute $A$ has a value of $v$, and $\abs{S_V}$ and $\abs{S}$ are the number of elements in $S_V$ and $S$, respectively \cite{ID3Algo,SYDE675}.
+
+\begin{align}
+    \label{eq:Q1A_InfoGain}
+    Gain(S, A) &= Entropy(S) - \sum_{v\in values(A)}{\frac{\abs{S_V}}{\abs{S}} \cdot Entropy(S_V)}
+\end{align}
+
+The only problem with the calculation of the information gain is that this only works for discrete data. This can be easily solved by setting a threshold based on the possible values that an attribute can have. With this, it is possible to create what could be considered two discrete categories: less than and greater than the threshold.
+To summarize, a node of a tree can be created by finding the attribute (and its threshold) that has the most information gain in the dataset. To further create the leaves, the subsets of the dataset corresponding to the values less than and greater than the threshold are used to create the left and right leaf of the tree, being also a tree on their own. This in turn means that a leaf of a tree is a tree created based on the subset of data of the parent tree. This is done recursively until there are no more data samples or attributes, all the samples belong to the same class or there is no information gain from the remaining samples.
+
+To reduce the possibility of overfitting, instead of training the decision tree with the complete dataset a part of it is reserved to test the resulting tree \cite{Cross_Val}. The dataset can be split k bins, or folds, where one of the folds is used for testing while the rest is used for training the prediction function. This process is repeated k times, each using a different fold for the testing. This is known as K-fold cross-validation \cite{k_fold}. This in turn can be repeated a certain amount of times while shuffling the order of the data, so as to make sure that there is no bias in the folds previously selected previously. This is known as repeated K-fold \cite{repeated_k_fold}.
+
+For this particular scenario, 10 repetitions of 10-fold cross-validation were used. The accuracy of the model on each of the test data used on each of the folds was calculated, resulting in 100 different values for the accuracy of the system. The mean accuracy for the wine decision tree was 92.57\% and its variance was 0.0048. For the Tic-tac-toe dataset, the mean accuracy was 85.01\% with a variance of 0.0017. The resulting confusion matrices can be seen in Fig. \ref{fig:Q1A_ConfMat}.
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=\linewidth]{Img/Q1/Q1A_ConfMat.png}
+    \caption{Confusion matrix for the Wine and Tic-Tac-Toe decision trees using Information Gain.}
+    \label{fig:Q1A_ConfMat}
+\end{figure}
+
+% -----------------------b--------------------------------------------------
+\bibliographystyle{IEEEbib}
+\bibliography{strings,refs}
+
+\end{document}
