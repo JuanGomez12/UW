@@ -9,15 +9,17 @@ import matplotlib.mlab as mlab
 import seaborn as sns
 import pandas as pd
 import math
+from sklearn.preprocessing import StandardScaler # For standardizing numerical datasets
+import matplotlib.ticker as mtick # For Q3
 
 # Set parameters
 sns.set_style("darkgrid") # Set seaborn's dark grid style
-sns.set_context("talk") # Make the font of the plots bigger
+sns.set_context("poster") # Make the font of the plots bigger
+figure_size = [20.0, 10.0]
 verbose = False
-test = True
 saveResults = False
-Q2 = False
-Q3A = False
+Q2 = True
+Q3A = True
 Q3B = True
 
 # Try getting the file locally, if not found try it online
@@ -333,7 +335,7 @@ def trainTestTree(trainData, testData, gain_ratio = False):
 
 #---------------------------------------------------------------------------------------------------------------------------
 
-from sklearn.preprocessing import StandardScaler
+
 def addAttrNoise(dataX, dataY, percentage):
   """ Get the input data, in the form of [n_samples, n_attrributes], and return the dataset
     with the desired percentage of it modified with noise.
@@ -550,7 +552,7 @@ def plotConfMat(mat1, mat2, mat1Labels = None, mat2Labels = None, saveFig = Fals
 
 
   fig, axs = plt.subplots(nrows = 1, ncols = 3,
-                        figsize = [20.0, 10.0],
+                        figsize = figure_size,
                         gridspec_kw = dict(width_ratios = [3, 2.8, 0.2]))
 
   # Plot both heat maps
@@ -578,16 +580,6 @@ def plotConfMat(mat1, mat2, mat1Labels = None, mat2Labels = None, saveFig = Fals
   plt.show()
 
 #---------------------------------------------------------------------------------------------------------------------------
-
-if verbose and test:
-  # Test the tree creation
-  tree = decisionTree(array_wine[:,1:], array_wine[:,0], gain_ratio = True)
-  tree_TTT = decisionTree(array_TTT[:,:9], array_TTT[:,9], gain_ratio = True)
-  print('wine prediction of val 20: ', tree.predict(array_wine[20, 1:]))
-  print('wine prediction of val 120: ', tree.predict(array_wine[120, 1:]))
-  print('TTT prediction of val 100: ', tree_TTT.predict(array_TTT[100, :9]))
-  print('TTT prediction of val 700: ', tree_TTT.predict(array_TTT[700, :9]))
-
 
 # Question 2 a)
 if Q2:
@@ -630,9 +622,8 @@ if Q2:
 # Question 3 A)
 
 # First the plotting functions
-import matplotlib.ticker as mtick
 def plotNoise(data, percentages, labels, saveFig = False):
-  fig, axs = plt.subplots(nrows = 1, ncols = 2, sharey = True, figsize = [20.0, 10.0], gridspec_kw = {'wspace':0.04, 'hspace':0})
+  fig, axs = plt.subplots(nrows = 1, ncols = 2, sharey = True, figsize = figure_size, gridspec_kw = {'wspace':0.04, 'hspace':0})
 
   colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'] # colors to use for the plot
 
@@ -654,7 +645,8 @@ def plotNoise(data, percentages, labels, saveFig = False):
   axs[1].yaxis.set_major_formatter(mtick.PercentFormatter(xmax = 1))
 
   # Set the legend
-  axs[0].legend(ncol = 4, loc = 'center', fontsize = 'small',columnspacing = 0.8, handlelength=1.5, bbox_to_anchor = (1.02, -0.1))
+  col_num = round(len(labels)/2)
+  axs[0].legend(ncol = col_num, loc = 'center', fontsize = 'small',columnspacing = 0.8, handlelength=1.5, bbox_to_anchor = (1.02, -0.1))
 
   # fig.tight_layout()
   if saveFig:
@@ -732,10 +724,3 @@ if Q3B:
   data = [contradictory, missclass]
   categories = ['Contradictory Examples', 'Missclassifications'] # labels to use for the plot
   plotNoise(data, percentages, categories)
-
-if test:
-  a = addClassNoise(array_wine[:, 1:], array_wine[:,0], 0.05)
-  b = addClassNoise(array_TTT[:, :-1], array_TTT[:,-1], 0.05)
-  c = addClassNoise(array_wine[:, 1:], array_wine[:,0], 0.05, True)
-  d = addClassNoise(array_TTT[:, :-1], array_TTT[:,-1], 0.05, True)
-  print('done')
