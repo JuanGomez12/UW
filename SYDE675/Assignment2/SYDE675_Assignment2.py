@@ -26,7 +26,7 @@ Q3B = True
 try:
   print("Getting the wine dataset file locally")
   df_wine = pd.read_csv('wine.data',
-               header=None) # Load file
+               header = None) # Load file
 except:
   print("Could not find the wine dataset, getting file from the internet")
   df_wine = pd.read_csv('https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data',
@@ -38,7 +38,7 @@ else:
 try:
   print("Getting the Tic-Tac-Toe dataset file locally")
   df_TTT = pd.read_csv('tic-tac-toe.data',
-               header=None) #Load from WWW
+               header = None) #Load from WWW
 except:
   print("Could not find the Tic-Tac-Toe dataset, getting file from the internet")
   df_TTT = pd.read_csv('https://archive.ics.uci.edu/ml/machine-learning-databases/tic-tac-toe/tic-tac-toe.data',
@@ -646,7 +646,7 @@ def plotNoise(data, percentages, labels, saveFig = False):
 
   # Set the legend
   col_num = round(len(labels)/2)
-  axs[0].legend(ncol = col_num, loc = 'center', fontsize = 'small',columnspacing = 0.8, handlelength=1.5, bbox_to_anchor = (1.02, -0.1))
+  axs[0].legend(ncol = col_num, loc = 'center', fontsize = 'small',columnspacing = 0.8, handlelength=1.5, bbox_to_anchor = (1.02, -0.14))
 
   # fig.tight_layout()
   if saveFig:
