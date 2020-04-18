@@ -59,8 +59,19 @@ class adaBoostMC:
     return 'adaBoost classifier'
   def __str__(self):
     return 'adaBoost classifier'
-  def fit(self, xTrain, yTrain):
+  def get_params(self, deep = True):
+    return {"classifierNumber": self.classifierNumber, "learningRate": self.learningRate,
+     "trainSamples": self.trainSamples, "maxDepth": self.maxDepth}
+  def set_params(self, **parameters):
+    for parameter, value in parameters.items():
+        setattr(self, parameter, value)
+    return self
+  def fit(self, xTrain, yTrain, classifierNumber = None, maxDepth = None):
     """ Train the classifiers according to the predefined private attributes and the dataset that was input """
+    if classifierNumber is not None:
+      self.classifierNumber = classifierNumber
+    if maxDepth is not None:
+      self.maxDepth = maxDepth
     yTrainReshaped = np.reshape(yTrain,(-1, 1)) # reshape the yTrain array
     sampleData = np.concatenate([xTrain, yTrainReshaped], axis = 1) # concatenate all of the data
     self.classes = np.unique(yTrain) # get the possible values for the classes
@@ -88,6 +99,7 @@ class adaBoostMC:
       sampleWeights = sampleWeights/np.sum(sampleWeights) # normalize the sample weights
       self.classifierList.append(classifier)
       self.classifierWeights.append(estimatorWeight) #append sample weights to list
+    return self
   def predict(self, value):
     """ Function that predicts a class label based on the value or array of values given as input """
     if value.ndim > 1: # multiple samples for prediction?
@@ -318,7 +330,6 @@ def k_fold_crossval(dataX, dataY, folds = 10, classifierNumber = 500, maxDepth =
   datasplit = k_folder(data, folds)
   classifier = []
   accuracy = []
-  confMats = []
   for i in range(folds):
     data = list(datasplit) # Get the list of folds
     test_data = data.pop(i) # Get and remove the respective test fold for the iteration
@@ -348,10 +359,39 @@ def repeated_k_fold(dataX, dataY, reps = 10, folds = 10, classifierNumber = 500,
     accuracies.append(accuracy) 
   return list(classifier_list), list(accuracies)
 
-classifier, accuracies = repeated_k_fold(trainData[:,:-1], trainData[:,-1], classifierNumber = 200, maxDepth = 1)
-print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.2f}'.format(np.mean(accuracies) * 100, np.var(accuracies)))
-print(accuracies)
-bestClassifier = classifier[np.argmax(accuracies)]
-print(bestClassifier.score(testData[:,:-1], testData[:,-1]))
-# fig, ax = bestClassifier.plot(adaboost_dset_scaled[:,:-1], adaboost_dset_scaled[:,-1],  h = 0.01)
-# plt.show()
+from timeit import default_timer as timer
+
+
+
+classifierNumbers = [1, 10, 50, 100, 200, 500, 1000, 2000, 5000]
+maxDepths = [x for x in range(1, 11)]
+
+# totalClassifiers = len(classifierNumbers)
+# totalDepths = len(maxDepths)
+
+# gridSearch = np.full([totalClassifiers, totalDepths, 2], np.nan)
+
+# for i in range(totalClassifiers):
+#   classNum = classifierNumbers[i]
+#   for j in range(totalDepths):
+#     maxDepth = maxDepths[j]
+#     print('Number of Classifiers: {0:d}, Max Depth: {1:d}'.format(classNum, maxDepth))
+#     timerStart = timer()
+#     classifier, accuracies = repeated_k_fold(trainData[:,:-1], trainData[:,-1], classifierNumber = classNum, maxDepth = maxDepth)
+#     timerEnd = timer()
+#     gridSearch[i, j, 0] = np.mean(accuracies) # save the mean of the accuracies
+#     gridSearch[i, j, 1] = timerEnd - timerStart # save the time it took to compute
+#     print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.2f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100,
+#      np.var(accuracies), timerEnd - timerStart))
+# # fig, ax = bestClassifier.plot(adaboost_dset_scaled[:,:-1], adaboost_dset_scaled[:,-1],  h = 0.01)
+# # plt.show()
+
+
+from sklearn.model_selection import GridSearchCV
+parameters = {'classifierNumber':classifierNumbers, 'maxDepth':maxDepths}
+ada = adaBoostMC()
+clf = GridSearchCV(ada, parameters, cv = 10)
+clf.fit(trainData[:,:-1], trainData[:,-1])
+
+results = pd.DataFrame(clf.cv_results_)
+results.to_excel("GridSearchResults.xlsx")
