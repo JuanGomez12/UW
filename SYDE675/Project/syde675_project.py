@@ -11,7 +11,6 @@ import pandas as pd
 import math
 from sklearn.preprocessing import StandardScaler # For standardizing numerical datasets
 import matplotlib.ticker as mtick
-from sklearn.svm import SVC
 
 # Import some elements needed for the plotting
 from matplotlib.patches import Patch
@@ -36,18 +35,11 @@ X_test = pd.read_csv('X_test.txt', delim_whitespace=True,  header = None).values
 y_test = pd.read_csv('y_test.txt', delim_whitespace=True,  header = None).values
 testData = np.concatenate([X_test, np.reshape(y_test,(-1, 1))], axis = 1)
 
-# try:
-#   df_X_train = pd.read_csv('X_train.txt', delim_whitespace=True,  header = None, names = features) # Load file
-# except:
-#   print("Could not find the hw3_dataset1 dataset, is it in the same folder as the .py?")
-# else:
-#   print("hw3_dataset1 dataset loaded correctly")
-
 # create the adaboost multiclass class
 from sklearn import tree
 
 class adaBoostMC:
-  def __init__(self, classifierNumber = 500, learningRate = 0.5, trainSamples = 100, maxDepth = 1):
+  def __init__(self, classifierNumber = 500, learningRate = 0.5, trainSamples = 500, maxDepth = 1):
     self.classifierNumber = classifierNumber # target number of classifiers to use
     self.learningRate = learningRate # learning rate
     self.trainSamples = trainSamples # number of samples to use for training
@@ -68,6 +60,8 @@ class adaBoostMC:
     return self
   def fit(self, xTrain, yTrain, classifierNumber = None, maxDepth = None):
     """ Train the classifiers according to the predefined private attributes and the dataset that was input """
+    self.classifierList = []
+    self.classifierWeights = []
     if classifierNumber is not None:
       self.classifierNumber = classifierNumber
     if maxDepth is not None:
@@ -174,43 +168,65 @@ class adaBoostMC:
     # plt.show()
     return fig, ax
 
-class adaBoost:
-  def __init__(self, classifierNumber = 50, learningRate = 0.5, trainSamples = 100):
+# Now the adaboost using SVC
+from sklearn.svm import SVC
+class adaBoostMC_SVC:
+  def __init__(self, classifierNumber = 500, learningRate = 0.5, trainSamples = 500, C = 1):
     self.classifierNumber = classifierNumber # target number of classifiers to use
     self.learningRate = learningRate # learning rate
     self.trainSamples = trainSamples # number of samples to use for training
+    self.C = C
     self.classifierList = []
     self.classifierWeights = []
+    self.classes = []
   def __repr__(self):
     return 'adaBoost classifier'
   def __str__(self):
     return 'adaBoost classifier'
-  def fit(self, xTrain, yTrain):
+  def get_params(self, deep = True):
+    return {"classifierNumber": self.classifierNumber, "learningRate": self.learningRate,
+     "trainSamples": self.trainSamples, "C": self.C}
+  def set_params(self, **parameters):
+    for parameter, value in parameters.items():
+        setattr(self, parameter, value)
+    return self
+  def fit(self, xTrain, yTrain, classifierNumber = None, C = None):
     """ Train the classifiers according to the predefined private attributes and the dataset that was input """
+    self.classifierList = []
+    self.classifierWeights = []
+    if classifierNumber is not None:
+      self.classifierNumber = classifierNumber
+    if C is not None:
+      self.C = C
     yTrainReshaped = np.reshape(yTrain,(-1, 1)) # reshape the yTrain array
     sampleData = np.concatenate([xTrain, yTrainReshaped], axis = 1) # concatenate all of the data
-
+    self.classes = np.unique(yTrain) # get the possible values for the classes
     # Initialize sample weights
     dataSamples = xTrain.shape[0]
-    sampleWeights = np.full(dataSamples, 1/dataSamples)
+    sampleWeights = np.full(dataSamples, 1.0/dataSamples)
 
     # iteratively create the classifiers
     for i in range(self.classifierNumber):
-      estimatorErr = 1
-      while estimatorErr >= 0.5:
-        trainData = sampleData[np.random.choice(dataSamples, self.trainSamples, p = sampleWeights)]# sample the training set
-        classifier = tree.DecisionTreeClassifier(max_depth = 1) # create the stump
-        classifier.fit(trainData[:, :-1], trainData[:, -1]) # fit the classifier
-        yPredict = classifier.predict(xTrain) # predict with the newly created classifier
-        incorrectPreds = (yPredict != yTrain) # Find the incorrect predictions
-        estimatorErr = np.mean(np.average(incorrectPreds, weights = sampleWeights, axis = 0)) # calculate the classifier error
-      estimatorWeight = self.learningRate * np.log((1 - estimatorErr) / estimatorErr) # calculate the estimator weight
-      yTrain_x_yPred = np.multiply(yPredict, yTrain)
+      # estimatorErr = 1
+      # while estimatorErr >= 0.5:
+      trainData = sampleData[np.random.choice(dataSamples, self.trainSamples, p = sampleWeights)]# sample the training set
+      print(trainData[:, -1])
+      classifier = SVC(C = self.C) # create tree
+      classifier.fit(trainData[:, :-1], trainData[:, -1]) # fit the classifier
+      yPredict = classifier.predict(xTrain) # predict with the newly created classifier
+      incorrectPreds = (yPredict != yTrain) # Find the incorrect predictions
+      estimatorErr = np.mean(np.average(incorrectPreds, weights = sampleWeights, axis = 0)) # calculate the classifier error
+      estimatorWeight = np.log((1 - estimatorErr + 0.0001) / (estimatorErr + 0.0001)) + np.log(self.classes.shape[0] - 1)# calculate the estimator weight
+      # 1 for correct vals, -1 for incorrect vals
+      yTrain_x_yPred = np.zeros(incorrectPreds.shape)
+      yTrain_x_yPred[incorrectPreds == False] = 1
+      yTrain_x_yPred[incorrectPreds == True] = -1
       exp = np.exp(-estimatorWeight * yTrain_x_yPred)
       sampleWeights = np.multiply(sampleWeights, exp)
       sampleWeights = sampleWeights/np.sum(sampleWeights) # normalize the sample weights
       self.classifierList.append(classifier)
       self.classifierWeights.append(estimatorWeight) #append sample weights to list
+    return self
   def predict(self, value):
     """ Function that predicts a class label based on the value or array of values given as input """
     if value.ndim > 1: # multiple samples for prediction?
@@ -218,13 +234,13 @@ class adaBoost:
     else:
       value = np.reshape(value, (1, -1)) # reshape the data sample
       totalSamples = 1
-    predictionWeight = np.full([totalSamples, self.classifierNumber], np.nan)
+    predictionWeights = np.full([totalSamples, self.classes.shape[0]], 0.0)
+    # predictionWeight = np.full([totalSamples, self.classifierNumber], np.nan)
     for i in range(self.classifierNumber):
       prediction = self.classifierList[i].predict(value)
-      predictionWeight [:, i]= prediction * self.classifierWeights[i]
-    predictions = np.sum(predictionWeight, axis = 1)
-    predictions[predictions >= 0] = 1.0 # samples predicted as 1
-    predictions[predictions < 0] = -1.0 # samples predicted as -1
+      for j in range(totalSamples):
+        predictionWeights[j, int(prediction[j] - 1)] += self.classifierWeights[i]
+    predictions = np.argmax(predictionWeights, axis = 1) + 1
     return predictions
   def score(self, xTest, yTest):
     """ Function that calculates the accuracy of the classifier according to some test data """
@@ -285,6 +301,7 @@ class adaBoost:
     # plt.show()
     return fig, ax
 
+# Now we need to define the repeated k-folder cross validation technique
 # First, define the k-folder function:
 def k_folder(data, folds = 10):
   """ Get the input data, with rows being the samples, and create the amount of folds selected.
@@ -312,18 +329,9 @@ def k_folder(data, folds = 10):
   return datasplit
 
 
-# Then, create a createClassifier function
-# useful for later on when the crossvalidation needs to be done on the Adaboost instead of SVM
-def createClassifier(trainData, testData, classifierNumber = 500, maxDepth = 1):
-  individual_classifier = adaBoostMC(classifierNumber = classifierNumber, maxDepth = maxDepth) # Create a linear SVM
-  individual_classifier.fit(trainData[:,:-1], trainData[:,-1]) #Train the SVM
-  acc = individual_classifier.score(testData[:,:-1], testData[:,-1]) #test the SVM on the test data
-  return individual_classifier, acc
-
-
 # Then, the k fold cross validation function
-def k_fold_crossval(dataX, dataY, folds = 10, classifierNumber = 500, maxDepth = 1):
-  
+def k_fold_crossval(estimator, dataX, dataY, folds = 10, parameters = None):
+  clf = estimator
   dataY = np.reshape(dataY,(-1,1))
   data = np.concatenate([dataX, dataY], axis = 1)
 
@@ -335,8 +343,15 @@ def k_fold_crossval(dataX, dataY, folds = 10, classifierNumber = 500, maxDepth =
     test_data = data.pop(i) # Get and remove the respective test fold for the iteration
     train_data = np.concatenate((data), axis = 0) # Concatenate the rest of the data
 
-    # Create classifier and get the accuracy
-    individual_classifier, acc = createClassifier(train_data, test_data, classifierNumber, maxDepth)
+    # create the classifier
+    individual_classifier = estimator
+    # set the classifier parameters
+    if parameters is not None:
+      individual_classifier.set_params(**parameters)
+    individual_classifier.fit(trainData[:,:-1], trainData[:,-1]) # train the classifier
+
+    # get the accuracy
+    acc = individual_classifier.score(testData[:,:-1], testData[:,-1])
     
     classifier.append(individual_classifier)
     accuracy.append(acc)
@@ -345,26 +360,22 @@ def k_fold_crossval(dataX, dataY, folds = 10, classifierNumber = 500, maxDepth =
   return bestClassifier, avg_accuracy
 
 # Finally, the repeated k-fold function:
-def repeated_k_fold(dataX, dataY, reps = 10, folds = 10, classifierNumber = 500, maxDepth = 1):
-  dataY = np.reshape(dataY,(-1,1))
-  data = np.concatenate([dataX, dataY], axis = 1)
+def repeated_k_fold(estimator, dataX, dataY, reps = 10, folds = 10, parameters = None):
+  reshapedDataY = np.reshape(dataY,(-1,1))
+  data = np.concatenate([dataX, reshapedDataY], axis = 1)
 
   classifier_list = []
   accuracies = []
 
   for i in range(reps):
-    np.random.shuffle(data)
-    classifier, accuracy = k_fold_crossval(data[:,:-1], data[:,-1], folds, classifierNumber, maxDepth)
+    np.random.shuffle(data) # shuffle the data
+    classifier, accuracy = k_fold_crossval(estimator, data[:,:-1], data[:,-1], folds = folds, parameters = parameters)
     classifier_list.append(classifier)
     accuracies.append(accuracy) 
   return list(classifier_list), list(accuracies)
 
-from timeit import default_timer as timer
-
-
-
-classifierNumbers = [1, 10, 50, 100, 200, 500, 1000, 2000, 5000]
-maxDepths = [x for x in range(1, 11)]
+#classifierNumbers = [1, 10, 50, 100, 200, 500]
+#maxDepths = [x for x in range(1, 6)]
 
 # totalClassifiers = len(classifierNumbers)
 # totalDepths = len(maxDepths)
@@ -377,21 +388,121 @@ maxDepths = [x for x in range(1, 11)]
 #     maxDepth = maxDepths[j]
 #     print('Number of Classifiers: {0:d}, Max Depth: {1:d}'.format(classNum, maxDepth))
 #     timerStart = timer()
-#     classifier, accuracies = repeated_k_fold(trainData[:,:-1], trainData[:,-1], classifierNumber = classNum, maxDepth = maxDepth)
+#     classifier, accuracies = repeated_k_fold(trainData[:,:-1], trainData[:,-1], parameters)
 #     timerEnd = timer()
 #     gridSearch[i, j, 0] = np.mean(accuracies) # save the mean of the accuracies
 #     gridSearch[i, j, 1] = timerEnd - timerStart # save the time it took to compute
 #     print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.2f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100,
 #      np.var(accuracies), timerEnd - timerStart))
-# # fig, ax = bestClassifier.plot(adaboost_dset_scaled[:,:-1], adaboost_dset_scaled[:,-1],  h = 0.01)
 # # plt.show()
 
+from timeit import default_timer as timer
+classifiers = []
+columns = ['accuracy', 'time_to_compute']
 
-from sklearn.model_selection import GridSearchCV
-parameters = {'classifierNumber':classifierNumbers, 'maxDepth':maxDepths}
-ada = adaBoostMC()
-clf = GridSearchCV(ada, parameters, cv = 10)
-clf.fit(trainData[:,:-1], trainData[:,-1])
+# adaboostMC using SAMME, 200 classifiers
+parameters = {'classifierNumber':200, 'maxDepth':1}
+classifiers.append('SAMME_AdaBoost_200')
+estimator = adaBoostMC()
+timerStart = timer()
+classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
+timerEnd = timer()
+totalTime = timerEnd - timerStart
+classifierInfo = np.zeros((1,2))
+classifierInfo[0,0] = np.mean(accuracies)
+classifierInfo[0,1] = totalTime
+classifierComparison = classifierInfo
+# classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
+print('Time to compute:', totalTime) # show time it took to compute
+print('Mean accuracy:', np.mean(accuracies))
 
-results = pd.DataFrame(clf.cv_results_)
-results.to_excel("GridSearchResults.xlsx")
+# adaboostMC using SAMME, 500 classifiers
+parameters = {'classifierNumber':500, 'maxDepth':1}
+classifiers.append('SAMME_AdaBoost_500')
+estimator = adaBoostMC()
+timerStart = timer()
+classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
+timerEnd = timer()
+totalTime = timerEnd - timerStart
+classifierInfo = np.zeros((1,2))
+classifierInfo[0,0] = np.mean(accuracies)
+classifierInfo[0,1] = totalTime
+classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
+print('Time to compute:', totalTime) # show time it took to compute
+print('Mean accuracy:', np.mean(accuracies))
+
+# adaboostMC using SAMME, 800 classifiers
+parameters = {'classifierNumber':800, 'maxDepth':1}
+classifiers.append('SAMME_AdaBoost_800')
+estimator = adaBoostMC()
+timerStart = timer()
+classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
+timerEnd = timer()
+totalTime = timerEnd - timerStart
+classifierInfo = np.zeros((1,2))
+classifierInfo[0,0] = np.mean(accuracies)
+classifierInfo[0,1] = totalTime
+classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
+print('Time to compute:', totalTime) # show time it took to compute
+print('Mean accuracy:', np.mean(accuracies))
+
+# adaboostMC_SVC using C = 1, 100 classifiers
+parameters = {'classifierNumber':100, 'C':1}
+classifiers.append('SVC_AdaBoost_100')
+estimator = adaBoostMC_SVC()
+timerStart = timer()
+classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
+timerEnd = timer()
+totalTime = timerEnd - timerStart
+classifierInfo = np.zeros((1,2))
+classifierInfo[0,0] = np.mean(accuracies)
+classifierInfo[0,1] = totalTime
+classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
+print('Time to compute:', totalTime) # show time it took to compute
+print('Mean accuracy:', np.mean(accuracies))
+
+# Multiclass SVC as 1-vs-1
+from sklearn.svm import SVC
+classifiers.append('1v1_SVM')
+estimator = SVC()
+timerStart = timer()
+classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1])
+timerEnd = timer()
+totalTime = timerEnd - timerStart
+classifierInfo = np.zeros((1,2))
+classifierInfo[0,0] = np.mean(accuracies)
+classifierInfo[0,1] = totalTime
+classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
+print('Time to compute:', totalTime) # show time it took to compute
+print('Mean accuracy:', np.mean(accuracies))
+
+# Random forest
+from sklearn.ensemble import RandomForestClassifier
+classifiers.append('Random_Forest')
+estimator = RandomForestClassifier(max_depth=1, random_state=0)
+timerStart = timer()
+classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1])
+timerEnd = timer()
+totalTime = timerEnd - timerStart
+classifierInfo = np.zeros((1,2))
+classifierInfo[0,0] = np.mean(accuracies)
+classifierInfo[0,1] = totalTime
+classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
+print('Time to compute:', totalTime) # show time it took to compute
+print('Mean accuracy:', np.mean(accuracies))
+
+from sklearn.neighbors import KNeighborsClassifier
+classifiers.append('KNN')
+estimator = KNeighborsClassifier(n_neighbors=1)
+timerStart = timer()
+classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1])
+timerEnd = timer()
+classifierInfo = np.zeros((1,2))
+classifierInfo[0,0] = np.mean(accuracies)
+classifierInfo[0,1] = totalTime
+classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
+print('Time to compute:', totalTime) # show time it took to compute
+print('Mean accuracy:', np.mean(accuracies))
+
+df_classifierComparison = pd.DataFrame(classifierComparison, index = classifiers, columns = columns)
+# df_classifierComparison.to_excel("classifierComparison.xlsx")
