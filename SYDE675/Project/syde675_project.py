@@ -124,7 +124,7 @@ class adaBoostMC:
     correctPredictions = prediction == yTest
     return(sum(correctPredictions)/sampleNumber)
     
-  def confusionMat(self, xTest, yTest):
+  def confusionMat(self, xTest, yTest, as_df = False):
     """ Function that calculates the confusion matrix for the test data"""
     expectedLabels = self.classes # Get the classes/labels of the dataset
     confusionMatrix = np.full((expectedLabels.shape[0], expectedLabels.shape[0]), 0) # Create an empty conf mat
@@ -141,35 +141,30 @@ class adaBoostMC:
         for j in range(expectedLabels.shape[0]):
           if expectedLabels[j] == element:
             confusionMatrix[i, j] = count
+    if as_df:
+      classes = self.classes.astype(str)
+      confusionMatrix = pd.DataFrame(confusionMatrix, index = classes, columns = classes)
     return confusionMatrix
-  def plotConfMat(self, xTest, yTest, figSize = [20.0, 10.0]):
-    """ Function that pltos the confusion matrix for the test data """
+  def plotConfMat(self, xTest, yTest, figSize = [15.0, 10.0]):
+    """ Function that plots the confusion matrix for the test data """
     # Calculate the conf matrix:
     confMat = self.confusionMat(xTest, yTest)
     # Get the min and max values
     vmin = np.min(confMat)
     vmax = np.max(confMat)
-    classes = self.classes
-    classes = classes.astype(str)
-    df_CM = pd.DataFrame(confMat, index = classes,
-                  columns = classes)
-    
-    fig, axs = plt.subplots(nrows = 1, ncols = 2,
-                       figsize = figSize,
-                       gridspec_kw = dict(width_ratios = [3, 0.2]))
-    # Plot both heat maps
-    axs[0] = sns.heatmap(df_CM, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = False, cmap = "summer", ax = axs[0])
+    # create the dataframe to make it look nicer
+    classes = self.classes.astype(str)
+    df_CM = pd.DataFrame(confMat, index = classes, columns = classes)
 
-    # Configure aesthetics for ax 0
-    # axs[0].xaxis.set_ticks_position('top')
-    axs[0].xaxis.set_tick_params(length = 0)
-    axs[0].set_xlabel("Actual Values")
-    axs[0].set_ylabel("Predicted Values")
-
-    # Configure colorbar in ax 1
-    axs[1] = fig.colorbar(axs[0].collections[0], cax = axs[1])
+    # Plot heat map
+    fig, ax = plt.subplots(nrows = 1, ncols = 1,
+                       figsize = figSize)
+    ax = sns.heatmap(df_CM, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = True, cmap = "summer", ax = ax)
+    ax.xaxis.set_tick_params(length = 0)
+    ax.set_xlabel("Actual Values")
+    ax.set_ylabel("Predicted Values")
     fig.tight_layout()
-    return fig, axs
+    return fig, ax
 
 
 
@@ -260,7 +255,7 @@ class adaBoostMC_SVC:
     correctPredictions = prediction == yTest
     return(sum(correctPredictions)/sampleNumber)
 
-  def confusionMat(self, xTest, yTest):
+  def confusionMat(self, xTest, yTest, as_df = False):
     """ Function that calculates the confusion matrix for the test data"""
     expectedLabels = self.classes # Get the classes/labels of the dataset
     confusionMatrix = np.full((expectedLabels.shape[0], expectedLabels.shape[0]), 0) # Create an empty conf mat
@@ -277,35 +272,30 @@ class adaBoostMC_SVC:
         for j in range(expectedLabels.shape[0]):
           if expectedLabels[j] == element:
             confusionMatrix[i, j] = count
+    if as_df:
+      classes = self.classes.astype(str)
+      confusionMatrix = pd.DataFrame(confusionMatrix, index = classes, columns = classes)
     return confusionMatrix
-  def plotConfMat(self, xTest, yTest, figSize = [20.0, 10.0]):
-    """ Function that pltos the confusion matrix for the test data """
+  def plotConfMat(self, xTest, yTest, figSize = [15.0, 10.0]):
+    """ Function that plots the confusion matrix for the test data """
     # Calculate the conf matrix:
     confMat = self.confusionMat(xTest, yTest)
     # Get the min and max values
     vmin = np.min(confMat)
     vmax = np.max(confMat)
-    classes = self.classes
-    classes = classes.astype(str)
-    df_CM = pd.DataFrame(confMat, index = classes,
-                  columns = classes)
-    
-    fig, axs = plt.subplots(nrows = 1, ncols = 2,
-                       figsize = figSize,
-                       gridspec_kw = dict(width_ratios = [3, 0.2]))
-    # Plot both heat maps
-    axs[0] = sns.heatmap(df_CM, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = False, cmap = "summer", ax = axs[0])
+    # create the dataframe to make it look nicer
+    classes = self.classes.astype(str)
+    df_CM = pd.DataFrame(confMat, index = classes, columns = classes)
 
-    # Configure aesthetics for ax 0
-    # axs[0].xaxis.set_ticks_position('top')
-    axs[0].xaxis.set_tick_params(length = 0)
-    axs[0].set_xlabel("Actual Values")
-    axs[0].set_ylabel("Predicted Values")
-
-    # Configure colorbar in ax 1
-    axs[1] = fig.colorbar(axs[0].collections[0], cax = axs[1])
+    # Plot heat map
+    fig, ax = plt.subplots(nrows = 1, ncols = 1,
+                       figsize = figSize)
+    ax = sns.heatmap(df_CM, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = True, cmap = "summer", ax = ax)
+    ax.xaxis.set_tick_params(length = 0)
+    ax.set_xlabel("Actual Values")
+    ax.set_ylabel("Predicted Values")
     fig.tight_layout()
-    return fig, axs
+    return fig, ax
 
 
 # Now we need to define the repeated k-folder cross validation technique
@@ -381,7 +371,7 @@ def repeated_k_fold(estimator, dataX, dataY, reps = 10, folds = 10, parameters =
     accuracies.append(accuracy) 
   return list(classifier_list), list(accuracies)
 
-from timeit import default_timer as timer
+from timeit import default_timer as timer # import the timer
 classifierNumbersStump = [1, 10, 50, 100, 200, 500, 1000]
 if test:
   classifierNumbersStump = [1, 10, 50]
@@ -457,18 +447,26 @@ else:
   chosenParams = {'classifierNumber':classifierNumbersSVM[maxSVMPos]}
   chosenEstimator = 'SVM'
 
+if test:
+  comparisonEstimator = adaBoostMC()
+  classifiers.append('SAMME_stumps')
+  chosenParams = {'classifierNumber':2000}
+  chosenEstimator = 'stumps'
+
 #calculate SAMME accuracy and time
 if verbose:
   print('Calculating SAMME using', chosenEstimator)
 estimator = comparisonEstimator
 estimator.set_params(**chosenParams)
 timerStart = timer()
-estimator.fit(trainData[:,:-1], trainData[:,-1])
-accuracies = estimator.score(testData[:,:-1], testData[:,-1])
+estimator.fit(trainData[:,:-1], trainData[:, -1])
+accuracies = estimator.score(testData[:, :-1], testData[:, -1])
 timerEnd = timer()
-confMat = estimator.confusionMat(testData[:,:-1], testData[:,-1]) # Calculate the confusion matrix
-fig, ax = estimator.plotConfMat(testData[:,:-1], testData[:,-1]) # Plot the confusion matrix
+confMat = estimator.confusionMat(testData[:, :-1], testData[:, -1], as_df = True) # Calculate the confusion matrix
+fig, ax = estimator.plotConfMat(testData[:, :-1], testData[:, -1]) # Plot the confusion matrix
 plt.show()
+print('SAMME confusion matrix:')
+print(confMat)
 if test:
   plt.savefig('confusionMatrix.png', bbox_inches = 'tight')
 totalTime = timerEnd - timerStart
@@ -479,14 +477,13 @@ if verbose:
   print('Mean accuracy:', np.mean(accuracies))
 
 # Multiclass SVC as 1-vs-1
-from sklearn.svm import SVC
 classifiers.append('1v1_SVM')
 if verbose:
   print('Calculating 1vs1 SVM using C=1')
 estimator = SVC()
 timerStart = timer()
-estimator.fit(trainData[:,:-1], trainData[:,-1])
-accuracies = estimator.score(testData[:,:-1], testData[:,-1])
+estimator.fit(trainData[:, :-1], trainData[:, -1])
+accuracies = estimator.score(testData[:, :-1], testData[:, -1])
 timerEnd = timer()
 totalTime = timerEnd - timerStart
 classifierComparisonAcc.append(np.mean(accuracies))
@@ -500,10 +497,10 @@ from sklearn.ensemble import RandomForestClassifier
 classifiers.append('Random_Forest')
 if verbose:
   print('Calculating Random Forest using stumps')
-estimator = RandomForestClassifier(max_depth=1, random_state=0)
+estimator = RandomForestClassifier(max_depth = 1, random_state = 0, n_estimators = chosenParams['classifierNumber'])
 timerStart = timer()
-estimator.fit(trainData[:,:-1], trainData[:,-1])
-accuracies = estimator.score(testData[:,:-1], testData[:,-1])
+estimator.fit(trainData[:, :-1], trainData[:, -1])
+accuracies = estimator.score(testData[:, :-1], testData[:, -1])
 timerEnd = timer()
 totalTime = timerEnd - timerStart
 classifierComparisonAcc.append(np.mean(accuracies))
@@ -537,11 +534,21 @@ print(df_classifierComparison)
 if test:
   df_classifierComparison.to_excel("classifierComparison.xlsx")
 
-def autolabel(ax, bars):
+def autolabelAcc(ax, bars):
     """Attach a text label above each bar in *bars*, displaying its height."""
     for rect in bars:
         height = rect.get_height()
-        ax.annotate('{0:.2f}'.format(height),
+        ax.annotate('{0:.2f}%'.format(height),
+                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')
+        
+def autolabelTime(ax, bars):
+    """Attach a text label above each bar in *bars*, displaying its height."""
+    for rect in bars:
+        height = rect.get_height()
+        ax.annotate('{0:.2f} s'.format(height),
                     xy=(rect.get_x() + rect.get_width() / 2, height),
                     xytext=(0, 3),  # 3 points vertical offset
                     textcoords="offset points",
@@ -551,15 +558,17 @@ fig, axs = plt.subplots(nrows = 1, ncols = 2, figsize = figure_size, gridspec_kw
 x = np.arange(len(classifiers))  # the label locations
 width = 0.35  # the width of the bars
 colors = ["tab:blue", "tab:green"]
+bars = []
 for ax, info, color, letter, lbl in zip(axs, [100 * classifierAcc, classifierTime], colors, ['(a)', '(b)'], ['Accuracy (%)', 'Time (s)']):
-  bars = ax.bar(x - width/2, info, width, color=color, label = lbl)
+  bars.append(ax.bar(x - width/2, info, width, color=color, label = lbl))
   # Add some text for labels, title and custom x-axis tick labels, etc.
   ax.set_ylabel(lbl)
   ax.set_xticks(x)
-  ax.set_xticklabels(classifiers, fontsize=14, rotation=45)
+  ax.set_xticklabels(classifiers, rotation=45)
   ax.set_xlabel(letter)
-  autolabel(ax, bars)
+autolabelAcc(axs[0], bars[0])
+autolabelTime(axs[1], bars[1])
+
 plt.show()
 if test:
   plt.savefig('classifier.png', bbox_inches = 'tight')
-  print('done!')
