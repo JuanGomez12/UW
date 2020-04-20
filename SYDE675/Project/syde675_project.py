@@ -39,25 +39,29 @@ testData = np.concatenate([X_test, np.reshape(y_test,(-1, 1))], axis = 1)
 from sklearn import tree
 
 class adaBoostMC:
-  def __init__(self, classifierNumber = 500, learningRate = 0.5, trainSamples = 500, maxDepth = 1):
+  def __init__(self, classifierNumber = 500, trainSamples = 500, maxDepth = 1):
     self.classifierNumber = classifierNumber # target number of classifiers to use
-    self.learningRate = learningRate # learning rate
     self.trainSamples = trainSamples # number of samples to use for training
     self.maxDepth = maxDepth
     self.classifierList = []
     self.classifierWeights = []
     self.classes = []
+
   def __repr__(self):
-    return 'adaBoost classifier'
+    return 'adaBoost SAMME with stumps as classifier'
+
   def __str__(self):
-    return 'adaBoost classifier'
+    return 'adaBoost SAMME with stumps as classifier'
+
   def get_params(self, deep = True):
-    return {"classifierNumber": self.classifierNumber, "learningRate": self.learningRate,
-     "trainSamples": self.trainSamples, "maxDepth": self.maxDepth}
+    return {"classifierNumber": self.classifierNumber, "trainSamples": self.trainSamples,
+    "maxDepth": self.maxDepth}
+
   def set_params(self, **parameters):
     for parameter, value in parameters.items():
         setattr(self, parameter, value)
     return self
+
   def fit(self, xTrain, yTrain, classifierNumber = None, maxDepth = None):
     """ Train the classifiers according to the predefined private attributes and the dataset that was input """
     self.classifierList = []
@@ -94,6 +98,7 @@ class adaBoostMC:
       self.classifierList.append(classifier)
       self.classifierWeights.append(estimatorWeight) #append sample weights to list
     return self
+
   def predict(self, value):
     """ Function that predicts a class label based on the value or array of values given as input """
     if value.ndim > 1: # multiple samples for prediction?
@@ -109,87 +114,43 @@ class adaBoostMC:
         predictionWeights[j, int(prediction[j] - 1)] += self.classifierWeights[i]
     predictions = np.argmax(predictionWeights, axis = 1) + 1
     return predictions
+
   def score(self, xTest, yTest):
     """ Function that calculates the accuracy of the classifier according to some test data """
     sampleNumber = xTest.shape[0]
     prediction = self.predict(xTest)
     correctPredictions = prediction == yTest
     return(sum(correctPredictions)/sampleNumber)
-  def plot(self, datasetX, datasetY, figureSize = [20, 10], h = 0.1):
-    """ Function that plots the decision boundary and scatterplots of the dataset given as input """
-    fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize = figureSize)
-    alph = 0.35
-
-    datasetClasses = np.unique(datasetY)
-
-    datasetYReshaped = np.reshape(datasetY,(-1, 1))
-    dataset = np.concatenate([datasetX, datasetYReshaped], axis = 1)
-
-    # Create and set the color map
-    heatmap_colors = ["tab:blue", "tab:green"]
-    cmap_jm = ListedColormap(heatmap_colors)
-
-    # for dataset, i in zip(datasets, range(len(datasets))):
-    xVals = datasetX
-    classLabels = datasetY
-
-    # create a mesh
-    x_min, x_max = xVals[:, 0].min() - 0.3 * abs(xVals[:, 0].min()), xVals[:, 0].max() + 0.3 * abs(xVals[:, 0].max())
-    y_min, y_max = xVals[:, 1].min() - 0.3 * abs(xVals[:, 1].min()), xVals[:, 1].max() + 0.3 * abs(xVals[:, 1].max())
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                        np.arange(y_min, y_max, h))
-
-    # Plot the decision boundary. For that, we will assign a color to each
-    # point in the mesh [x_min, x_max]x[y_min, y_max].
-
-    # Put the result into a color plot
-    Z = self.predict(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
-    ax.contourf(xx, yy, Z, cmap = cmap_jm, alpha = alph) #plot the mesh in color
 
 
-    #plot the dataset
-    dsetC1 = datasetX[datasetY == datasetClasses[0]]
-    dsetC2 = datasetX[datasetY == datasetClasses[1]]
-    ax.scatter(dsetC1[:, 0], dsetC1[:, 1], color = heatmap_colors[0], s = 40, label = 'Class ' + str(int(datasetClasses[0])))
-    ax.scatter(dsetC2[:, 0], dsetC2[:, 1], color = heatmap_colors[1], s = 40, label = 'Class ' + str(int(datasetClasses[1])))
 
-    ax.set_xlabel('feat1')
-    ax.set_ylabel('feat2')
-    ax.set_xlim(xx.min(), xx.max())
-    ax.set_ylim(yy.min(), yy.max())
-
-    legendHandles, labels = ax.get_legend_handles_labels()
-    legendHandles.insert(0, Patch(facecolor = heatmap_colors[1], alpha = alph,  edgecolor = 'None',
-                        label = 'Class ' + str(int(datasetClasses[1]))))
-    legendHandles.insert(0, Patch(facecolor = heatmap_colors[0], alpha = alph, edgecolor = 'None',
-                        label = 'Class ' + str(int(datasetClasses[0]))))
-    ax.legend(ncol = 2, handles = legendHandles, columnspacing = 0.8, handlelength = 1.5)
-    # plt.show()
-    return fig, ax
 
 # Now the adaboost using SVC
 from sklearn.svm import SVC
 class adaBoostMC_SVC:
-  def __init__(self, classifierNumber = 500, learningRate = 0.5, trainSamples = 500, C = 1):
+  def __init__(self, classifierNumber = 500, trainSamples = 500, C = 1):
     self.classifierNumber = classifierNumber # target number of classifiers to use
-    self.learningRate = learningRate # learning rate
     self.trainSamples = trainSamples # number of samples to use for training
     self.C = C
     self.classifierList = []
     self.classifierWeights = []
     self.classes = []
+
   def __repr__(self):
-    return 'adaBoost classifier'
+    return 'adaBoost SAMME with SVM as classifier'
+
   def __str__(self):
-    return 'adaBoost classifier'
+    return 'adaBoost SAMME with SVM as classifier'
+
   def get_params(self, deep = True):
     return {"classifierNumber": self.classifierNumber, "learningRate": self.learningRate,
      "trainSamples": self.trainSamples, "C": self.C}
+
   def set_params(self, **parameters):
     for parameter, value in parameters.items():
         setattr(self, parameter, value)
     return self
+
   def fit(self, xTrain, yTrain, classifierNumber = None, C = None):
     """ Train the classifiers according to the predefined private attributes and the dataset that was input """
     self.classifierList = []
@@ -210,7 +171,6 @@ class adaBoostMC_SVC:
       # estimatorErr = 1
       # while estimatorErr >= 0.5:
       trainData = sampleData[np.random.choice(dataSamples, self.trainSamples, p = sampleWeights)]# sample the training set
-      print(trainData[:, -1])
       classifier = SVC(C = self.C) # create tree
       classifier.fit(trainData[:, :-1], trainData[:, -1]) # fit the classifier
       yPredict = classifier.predict(xTrain) # predict with the newly created classifier
@@ -227,6 +187,7 @@ class adaBoostMC_SVC:
       self.classifierList.append(classifier)
       self.classifierWeights.append(estimatorWeight) #append sample weights to list
     return self
+
   def predict(self, value):
     """ Function that predicts a class label based on the value or array of values given as input """
     if value.ndim > 1: # multiple samples for prediction?
@@ -242,64 +203,14 @@ class adaBoostMC_SVC:
         predictionWeights[j, int(prediction[j] - 1)] += self.classifierWeights[i]
     predictions = np.argmax(predictionWeights, axis = 1) + 1
     return predictions
+
   def score(self, xTest, yTest):
     """ Function that calculates the accuracy of the classifier according to some test data """
     sampleNumber = xTest.shape[0]
     prediction = self.predict(xTest)
     correctPredictions = prediction == yTest
     return(sum(correctPredictions)/sampleNumber)
-  def plot(self, datasetX, datasetY, figureSize = [20, 10], h = 0.1):
-    """ Function that plots the decision boundary and scatterplots of the dataset given as input """
-    fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize = figureSize)
-    alph = 0.35
 
-    datasetClasses = np.unique(datasetY)
-
-    datasetYReshaped = np.reshape(datasetY,(-1, 1))
-    dataset = np.concatenate([datasetX, datasetYReshaped], axis = 1)
-
-    # Create and set the color map
-    heatmap_colors = ["tab:blue", "tab:green"]
-    cmap_jm = ListedColormap(heatmap_colors)
-
-    # for dataset, i in zip(datasets, range(len(datasets))):
-    xVals = datasetX
-    classLabels = datasetY
-
-    # create a mesh
-    x_min, x_max = xVals[:, 0].min() - 0.3 * abs(xVals[:, 0].min()), xVals[:, 0].max() + 0.3 * abs(xVals[:, 0].max())
-    y_min, y_max = xVals[:, 1].min() - 0.3 * abs(xVals[:, 1].min()), xVals[:, 1].max() + 0.3 * abs(xVals[:, 1].max())
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                        np.arange(y_min, y_max, h))
-
-    # Plot the decision boundary. For that, we will assign a color to each
-    # point in the mesh [x_min, x_max]x[y_min, y_max].
-
-    # Put the result into a color plot
-    Z = self.predict(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
-    ax.contourf(xx, yy, Z, cmap = cmap_jm, alpha = alph) #plot the mesh in color
-
-
-    #plot the dataset
-    dsetC1 = datasetX[datasetY == datasetClasses[0]]
-    dsetC2 = datasetX[datasetY == datasetClasses[1]]
-    ax.scatter(dsetC1[:, 0], dsetC1[:, 1], color = heatmap_colors[0], s = 40, label = 'Class ' + str(int(datasetClasses[0])))
-    ax.scatter(dsetC2[:, 0], dsetC2[:, 1], color = heatmap_colors[1], s = 40, label = 'Class ' + str(int(datasetClasses[1])))
-
-    ax.set_xlabel('feat1')
-    ax.set_ylabel('feat2')
-    ax.set_xlim(xx.min(), xx.max())
-    ax.set_ylim(yy.min(), yy.max())
-
-    legendHandles, labels = ax.get_legend_handles_labels()
-    legendHandles.insert(0, Patch(facecolor = heatmap_colors[1], alpha = alph,  edgecolor = 'None',
-                        label = 'Class ' + str(int(datasetClasses[1]))))
-    legendHandles.insert(0, Patch(facecolor = heatmap_colors[0], alpha = alph, edgecolor = 'None',
-                        label = 'Class ' + str(int(datasetClasses[0]))))
-    ax.legend(ncol = 2, handles = legendHandles, columnspacing = 0.8, handlelength = 1.5)
-    # plt.show()
-    return fig, ax
 
 # Now we need to define the repeated k-folder cross validation technique
 # First, define the k-folder function:
@@ -374,29 +285,40 @@ def repeated_k_fold(estimator, dataX, dataY, reps = 10, folds = 10, parameters =
     accuracies.append(accuracy) 
   return list(classifier_list), list(accuracies)
 
-#classifierNumbers = [1, 10, 50, 100, 200, 500]
-#maxDepths = [x for x in range(1, 6)]
-
-# totalClassifiers = len(classifierNumbers)
-# totalDepths = len(maxDepths)
-
-# gridSearch = np.full([totalClassifiers, totalDepths, 2], np.nan)
-
-# for i in range(totalClassifiers):
-#   classNum = classifierNumbers[i]
-#   for j in range(totalDepths):
-#     maxDepth = maxDepths[j]
-#     print('Number of Classifiers: {0:d}, Max Depth: {1:d}'.format(classNum, maxDepth))
-#     timerStart = timer()
-#     classifier, accuracies = repeated_k_fold(trainData[:,:-1], trainData[:,-1], parameters)
-#     timerEnd = timer()
-#     gridSearch[i, j, 0] = np.mean(accuracies) # save the mean of the accuracies
-#     gridSearch[i, j, 1] = timerEnd - timerStart # save the time it took to compute
-#     print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.2f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100,
-#      np.var(accuracies), timerEnd - timerStart))
-# # plt.show()
-
 from timeit import default_timer as timer
+classifierNumbers = [1, 10, 50, 100, 200, 500, 1000]
+totalClassifiers = len(classifierNumbers)
+estimators = [adaBoostMC_SVC(), adaBoostMC()]
+totalEstimators = len(estimators)
+gridSearchStump = np.full([totalClassifiers, 2], np.nan)
+gridSearchSVM = np.full([totalClassifiers, 2], np.nan)
+
+estimator = adaBoostMC_SVC()
+for i in range(totalClassifiers):
+  classNum = classifierNumbers[i]
+  print('Number of Classifiers: {0:d}'.format(classNum))
+  parameters = {'classifierNumber':classNum}
+  timerStart = timer()
+  classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
+  timerEnd = timer()
+  totalTime = timerEnd - timerStart
+  gridSearchSVM[i, 0] = np.mean(accuracies) # save the mean of the accuracies
+  gridSearchSVM[i, 1] = totalTime # save the time it took to compute
+  print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.4f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100, np.var(accuracies), totalTime))
+
+estimator = adaBoostMC()
+for i in range(totalClassifiers):
+  classNum = classifierNumbers[i]
+  print('Number of Classifiers: {0:d}'.format(classNum))
+  parameters = {'classifierNumber':classNum}
+  timerStart = timer()
+  classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
+  timerEnd = timer()
+  totalTime = timerEnd - timerStart
+  gridSearchStump[i, 0] = np.mean(accuracies) # save the mean of the accuracies
+  gridSearchStump[i, 1] = totalTime # save the time it took to compute
+  print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.4f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100, np.var(accuracies), totalTime))
+
 classifiers = []
 columns = ['accuracy', 'time_to_compute']
 
