@@ -142,6 +142,34 @@ class adaBoostMC:
           if expectedLabels[j] == element:
             confusionMatrix[i, j] = count
     return confusionMatrix
+  def plotConfMat(self, xTest, yTest, figSize = [20.0, 10.0]):
+    """ Function that pltos the confusion matrix for the test data """
+    # Calculate the conf matrix:
+    confMat = self.confusionMat(xTest, yTest)
+    # Get the min and max values
+    vmin = np.min(confMat)
+    vmax = np.max(confMat)
+    classes = self.classes
+    classes = classes.astype(str)
+    df_CM = pd.DataFrame(confMat, index = classes,
+                  columns = classes)
+    
+    fig, axs = plt.subplots(nrows = 1, ncols = 2,
+                       figsize = figSize,
+                       gridspec_kw = dict(width_ratios = [3, 0.2]))
+    # Plot both heat maps
+    axs[0] = sns.heatmap(df_CM, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = False, cmap = "summer", ax = axs[0])
+
+    # Configure aesthetics for ax 0
+    # axs[0].xaxis.set_ticks_position('top')
+    axs[0].xaxis.set_tick_params(length = 0)
+    axs[0].set_xlabel("Actual Values")
+    axs[0].set_ylabel("Predicted Values")
+
+    # Configure colorbar in ax 1
+    axs[1] = fig.colorbar(axs[0].collections[0], cax = axs[1])
+    fig.tight_layout()
+    return fig, axs
 
 
 
@@ -251,15 +279,17 @@ class adaBoostMC_SVC:
             confusionMatrix[i, j] = count
     return confusionMatrix
   def plotConfMat(self, xTest, yTest, figSize = [20.0, 10.0]):
+    """ Function that pltos the confusion matrix for the test data """
     # Calculate the conf matrix:
     confMat = self.confusionMat(xTest, yTest)
     # Get the min and max values
-    vmin = min(confMat.min())
-    vmax = max(confMat.max())
-    classes = self.classes + 1
+    vmin = np.min(confMat)
+    vmax = np.max(confMat)
+    classes = self.classes
     classes = classes.astype(str)
     df_CM = pd.DataFrame(confMat, index = classes,
                   columns = classes)
+    
     fig, axs = plt.subplots(nrows = 1, ncols = 2,
                        figsize = figSize,
                        gridspec_kw = dict(width_ratios = [3, 0.2]))
@@ -267,12 +297,12 @@ class adaBoostMC_SVC:
     axs[0] = sns.heatmap(df_CM, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = False, cmap = "summer", ax = axs[0])
 
     # Configure aesthetics for ax 0
-    axs[0].xaxis.set_ticks_position('top')
+    # axs[0].xaxis.set_ticks_position('top')
     axs[0].xaxis.set_tick_params(length = 0)
     axs[0].set_xlabel("Actual Values")
     axs[0].set_ylabel("Predicted Values")
 
-    # Configure colorbar in ax 2
+    # Configure colorbar in ax 1
     axs[1] = fig.colorbar(axs[0].collections[0], cax = axs[1])
     fig.tight_layout()
     return fig, axs
@@ -502,10 +532,10 @@ classifierAcc = np.asarray(classifierComparisonAcc)
 classifierTime = np.asarray(classifierComparisonTime)
 classifierComparison = np.concatenate([np.reshape(classifierAcc,(-1, 1)), np.reshape(classifierTime,(-1, 1))], axis = 1)
 
-# np.reshape(classifierAcc,(-1, 2))
-
 df_classifierComparison = pd.DataFrame(classifierComparison, index = classifiers, columns = columns)
-df_classifierComparison.to_excel("classifierComparison.xlsx")
+print(df_classifierComparison)
+if test:
+  df_classifierComparison.to_excel("classifierComparison.xlsx")
 
 def autolabel(ax, bars):
     """Attach a text label above each bar in *bars*, displaying its height."""
