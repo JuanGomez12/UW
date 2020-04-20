@@ -23,7 +23,8 @@ sns.set_context("poster") # Make the font of the plots bigger
 figure_size = [20.0, 10.0]
 verbose = True
 moreThan1Hour = False # Change this flag to compute the 10-times 10-fold cross-validation parameters that take more than 1 hour
-test = True # For testing all the algorithms with small parameters so it doesn't take long to compute
+test = False # For testing all the algorithms with small parameters so it doesn't take long to compute
+saveResults = True # For saving the results into a file
 
 # Try getting the file locally
 # df_features = pd.read_csv('features.txt', delim_whitespace=True,  header = None) # Load file
@@ -48,6 +49,7 @@ class adaBoostMC:
     self.classifierList = []
     self.classifierWeights = []
     self.classes = []
+    self.incomplete = False
 
   def __repr__(self):
     return 'adaBoost SAMME with stumps as classifier'
@@ -72,6 +74,7 @@ class adaBoostMC:
       self.classifierNumber = classifierNumber
     if maxDepth is not None:
       self.maxDepth = maxDepth
+    self.trainSamples = int(0.1 * xTrain.shape[0]) # Set the number of samples to 10% of the data
     yTrainReshaped = np.reshape(yTrain,(-1, 1)) # reshape the yTrain array
     sampleData = np.concatenate([xTrain, yTrainReshaped], axis = 1) # concatenate all of the data
     self.classes = np.unique(yTrain) # get the possible values for the classes
@@ -81,14 +84,27 @@ class adaBoostMC:
 
     # iteratively create the classifiers
     for i in range(self.classifierNumber):
-      # estimatorErr = 1
-      # while estimatorErr >= 0.5:
-      trainData = sampleData[np.random.choice(dataSamples, self.trainSamples, p = sampleWeights)]# sample the training set
-      classifier = tree.DecisionTreeClassifier(max_depth = self.maxDepth) # create tree
-      classifier.fit(trainData[:, :-1], trainData[:, -1]) # fit the classifier
-      yPredict = classifier.predict(xTrain) # predict with the newly created classifier
-      incorrectPreds = (yPredict != yTrain) # Find the incorrect predictions
-      estimatorErr = np.mean(np.average(incorrectPreds, weights = sampleWeights, axis = 0)) # calculate the classifier error
+      estimatorErr = 1
+      tries = 0
+      while estimatorErr >= (1 - 1/self.classes.shape[0]) and tries < 101:
+        tries += 1
+        trainData = sampleData[np.random.choice(dataSamples, self.trainSamples, p = sampleWeights)]# sample the training set
+        classifier = tree.DecisionTreeClassifier(max_depth = self.maxDepth) # create tree
+        try:
+          classifier.fit(trainData[:, :-1], trainData[:, -1]) # fit the classifier
+          yPredict = classifier.predict(xTrain) # predict with the newly created classifier
+          incorrectPreds = (yPredict != yTrain) # Find the incorrect predictions
+          estimatorErr = np.mean(np.average(incorrectPreds, weights = sampleWeights, axis = 0)) # calculate the classifier error
+        except:
+          if verbose:
+            print('Could not create classifier')
+          estimatorErr = 1
+      if tries > 101:
+        if verbose:
+          print('Could not create full AdaBoost SAMME classifier, stopping early at classifierNumber', i)
+        self.incomplete = True
+        self.classifierNumber = i
+        break
       estimatorWeight = np.log((1 - estimatorErr + 0.0001) / (estimatorErr + 0.0001)) + np.log(self.classes.shape[0] - 1)# calculate the estimator weight
       # 1 for correct vals, -1 for incorrect vals
       yTrain_x_yPred = np.zeros(incorrectPreds.shape)
@@ -172,13 +188,14 @@ class adaBoostMC:
 # Now the adaboost using SVC
 from sklearn.svm import SVC
 class adaBoostMC_SVC:
-  def __init__(self, classifierNumber = 500, trainSamples = 500, C = 1):
+  def __init__(self, classifierNumber = 500, trainSamples = 700, C = 1):
     self.classifierNumber = classifierNumber # target number of classifiers to use
     self.trainSamples = trainSamples # number of samples to use for training
     self.C = C
     self.classifierList = []
     self.classifierWeights = []
     self.classes = []
+    self.incomplete = False
 
   def __repr__(self):
     return 'adaBoost SAMME with SVM as classifier'
@@ -187,8 +204,8 @@ class adaBoostMC_SVC:
     return 'adaBoost SAMME with SVM as classifier'
 
   def get_params(self, deep = True):
-    return {"classifierNumber": self.classifierNumber, "learningRate": self.learningRate,
-     "trainSamples": self.trainSamples, "C": self.C}
+    return {"classifierNumber": self.classifierNumber,
+            "trainSamples": self.trainSamples, "C": self.C}
 
   def set_params(self, **parameters):
     for parameter, value in parameters.items():
@@ -203,6 +220,7 @@ class adaBoostMC_SVC:
       self.classifierNumber = classifierNumber
     if C is not None:
       self.C = C
+    self.trainSamples = int(0.1 * xTrain.shape[0]) # Set the number of samples to 10% of the data
     yTrainReshaped = np.reshape(yTrain,(-1, 1)) # reshape the yTrain array
     sampleData = np.concatenate([xTrain, yTrainReshaped], axis = 1) # concatenate all of the data
     self.classes = np.unique(yTrain) # get the possible values for the classes
@@ -212,14 +230,27 @@ class adaBoostMC_SVC:
 
     # iteratively create the classifiers
     for i in range(self.classifierNumber):
-      # estimatorErr = 1
-      # while estimatorErr >= 0.5:
-      trainData = sampleData[np.random.choice(dataSamples, self.trainSamples, p = sampleWeights)]# sample the training set
-      classifier = SVC(C = self.C) # create tree
-      classifier.fit(trainData[:, :-1], trainData[:, -1]) # fit the classifier
-      yPredict = classifier.predict(xTrain) # predict with the newly created classifier
-      incorrectPreds = (yPredict != yTrain) # Find the incorrect predictions
-      estimatorErr = np.mean(np.average(incorrectPreds, weights = sampleWeights, axis = 0)) # calculate the classifier error
+      estimatorErr = 1
+      tries = 0
+      while estimatorErr >= (1 - 1/self.classes.shape[0]) and tries < 101:
+        tries += 1
+        trainData = sampleData[np.random.choice(dataSamples, self.trainSamples, p = sampleWeights)]# sample the training set
+        classifier = SVC(C = self.C) # create tree
+        try:
+          classifier.fit(trainData[:, :-1], trainData[:, -1]) # fit the classifier
+          yPredict = classifier.predict(xTrain) # predict with the newly created classifier
+          incorrectPreds = (yPredict != yTrain) # Find the incorrect predictions
+          estimatorErr = np.mean(np.average(incorrectPreds, weights = sampleWeights, axis = 0)) # calculate the classifier error
+        except:
+          if verbose:
+            print('Could not create classifier')
+          estimatorErr = 1
+      if tries > 101:
+        if verbose:
+          print('Could not create full AdaBoost SAMME classifier, stopping early at classifierNumber', i)
+        self.incomplete = True
+        self.classifierNumber = i
+        break
       estimatorWeight = np.log((1 - estimatorErr + 0.0001) / (estimatorErr + 0.0001)) + np.log(self.classes.shape[0] - 1)# calculate the estimator weight
       # 1 for correct vals, -1 for incorrect vals
       yTrain_x_yPred = np.zeros(incorrectPreds.shape)
@@ -372,10 +403,11 @@ def repeated_k_fold(estimator, dataX, dataY, reps = 10, folds = 10, parameters =
   return list(classifier_list), list(accuracies)
 
 from timeit import default_timer as timer # import the timer
-classifierNumbersStump = [1, 10, 50, 100, 200, 500, 1000]
+classifierNumbersStump = [1, 10, 50, 100, 200, 500]
 if test:
   classifierNumbersStump = [1, 10, 50]
 if moreThan1Hour:
+  classifierNumbersStump.append([1000])
   classifierNumbersStump.append([2000])
 totalClassifiersStump = len(classifierNumbersStump)
 gridSearchStump = np.full([totalClassifiersStump, 2], np.nan)
@@ -399,10 +431,11 @@ for i in range(totalClassifiersStump):
     print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.4f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100, np.var(accuracies), totalTime))
 
 
-classifierNumbersSVM = [1, 10, 50]
+classifierNumbersSVM = [1, 10]
 if test:
   classifierNumbersSVM = [1, 5]
 if moreThan1Hour:
+  classifierNumbersSVM.append([50])
   classifierNumbersSVM.append([100])
 
 totalClassifiersSVM = len(classifierNumbersSVM)
@@ -449,6 +482,7 @@ else:
 
 if test:
   comparisonEstimator = adaBoostMC()
+  classifiers = []
   classifiers.append('SAMME_stumps')
   chosenParams = {'classifierNumber':2000}
   chosenEstimator = 'stumps'
@@ -467,7 +501,7 @@ fig, ax = estimator.plotConfMat(testData[:, :-1], testData[:, -1]) # Plot the co
 plt.show()
 print('SAMME confusion matrix:')
 print(confMat)
-if test:
+if test or saveResults:
   plt.savefig('confusionMatrix.png', bbox_inches = 'tight')
 totalTime = timerEnd - timerStart
 classifierComparisonAcc.append(np.mean(accuracies))
@@ -481,6 +515,23 @@ classifiers.append('1v1_SVM')
 if verbose:
   print('Calculating 1vs1 SVM using C=1')
 estimator = SVC()
+timerStart = timer()
+estimator.fit(trainData[:, :-1], trainData[:, -1])
+accuracies = estimator.score(testData[:, :-1], testData[:, -1])
+timerEnd = timer()
+totalTime = timerEnd - timerStart
+classifierComparisonAcc.append(np.mean(accuracies))
+classifierComparisonTime.append(totalTime)
+if verbose:
+  print('Time to compute:', totalTime) # show time it took to compute
+  print('Mean accuracy:', np.mean(accuracies))
+
+# Single decision tree
+from sklearn import tree
+classifiers.append('Decision_tree')
+if verbose:
+  print('Calculating Decision tree, max depth')
+estimator = tree.DecisionTreeClassifier()
 timerStart = timer()
 estimator.fit(trainData[:, :-1], trainData[:, -1])
 accuracies = estimator.score(testData[:, :-1], testData[:, -1])
@@ -531,7 +582,7 @@ classifierComparison = np.concatenate([np.reshape(classifierAcc,(-1, 1)), np.res
 
 df_classifierComparison = pd.DataFrame(classifierComparison, index = classifiers, columns = columns)
 print(df_classifierComparison)
-if test:
+if test or saveResults:
   df_classifierComparison.to_excel("classifierComparison.xlsx")
 
 def autolabelAcc(ax, bars):
@@ -570,5 +621,5 @@ autolabelAcc(axs[0], bars[0])
 autolabelTime(axs[1], bars[1])
 
 plt.show()
-if test:
+if test or saveResults:
   plt.savefig('classifier.png', bbox_inches = 'tight')
