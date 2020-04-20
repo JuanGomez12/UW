@@ -21,7 +21,9 @@ import string
 sns.set_style("darkgrid") # Set seaborn's dark grid style
 sns.set_context("poster") # Make the font of the plots bigger
 figure_size = [20.0, 10.0]
-verbose = False
+verbose = True
+moreThan1Hour = False # Change this flag to compute the 10-times 10-fold cross-validation parameters that take more than 1 hour
+test = True # For testing all the algorithms with small parameters so it doesn't take long to compute
 
 # Try getting the file locally
 # df_features = pd.read_csv('features.txt', delim_whitespace=True,  header = None) # Load file
@@ -121,6 +123,25 @@ class adaBoostMC:
     prediction = self.predict(xTest)
     correctPredictions = prediction == yTest
     return(sum(correctPredictions)/sampleNumber)
+    
+  def confusionMat(self, xTest, yTest):
+    """ Function that calculates the confusion matrix for the test data"""
+    expectedLabels = self.classes # Get the classes/labels of the dataset
+    confusionMatrix = np.full((expectedLabels.shape[0], expectedLabels.shape[0]), 0) # Create an empty conf mat
+    for i in range(expectedLabels.shape[0]): # Iterate over the possible labels
+      expectedLabel = expectedLabels[i]
+      labelData = xTest[yTest == expectedLabel]
+      predict = []
+      # Check predictions
+      predict = self.predict(labelData)
+      # Count the number of each prediction
+      unique, counts = np.unique(predict, return_counts = True)
+      # Build the confusion matrix for the label 
+      for element, count in zip(unique, counts):
+        for j in range(expectedLabels.shape[0]):
+          if expectedLabels[j] == element:
+            confusionMatrix[i, j] = count
+    return confusionMatrix
 
 
 
@@ -211,6 +232,51 @@ class adaBoostMC_SVC:
     correctPredictions = prediction == yTest
     return(sum(correctPredictions)/sampleNumber)
 
+  def confusionMat(self, xTest, yTest):
+    """ Function that calculates the confusion matrix for the test data"""
+    expectedLabels = self.classes # Get the classes/labels of the dataset
+    confusionMatrix = np.full((expectedLabels.shape[0], expectedLabels.shape[0]), 0) # Create an empty conf mat
+    for i in range(expectedLabels.shape[0]): # Iterate over the possible labels
+      expectedLabel = expectedLabels[i]
+      labelData = xTest[yTest == expectedLabel]
+      predict = []
+      # Check predictions
+      predict = self.predict(labelData)
+      # Count the number of each prediction
+      unique, counts = np.unique(predict, return_counts = True)
+      # Build the confusion matrix for the label 
+      for element, count in zip(unique, counts):
+        for j in range(expectedLabels.shape[0]):
+          if expectedLabels[j] == element:
+            confusionMatrix[i, j] = count
+    return confusionMatrix
+  def plotConfMat(self, xTest, yTest, figSize = [20.0, 10.0]):
+    # Calculate the conf matrix:
+    confMat = self.confusionMat(xTest, yTest)
+    # Get the min and max values
+    vmin = min(confMat.min())
+    vmax = max(confMat.max())
+    classes = self.classes + 1
+    classes = classes.astype(str)
+    df_CM = pd.DataFrame(confMat, index = classes,
+                  columns = classes)
+    fig, axs = plt.subplots(nrows = 1, ncols = 2,
+                       figsize = figSize,
+                       gridspec_kw = dict(width_ratios = [3, 0.2]))
+    # Plot both heat maps
+    axs[0] = sns.heatmap(df_CM, vmin = vmin, vmax = vmax, annot = True, fmt = 'g', cbar = False, cmap = "summer", ax = axs[0])
+
+    # Configure aesthetics for ax 0
+    axs[0].xaxis.set_ticks_position('top')
+    axs[0].xaxis.set_tick_params(length = 0)
+    axs[0].set_xlabel("Actual Values")
+    axs[0].set_ylabel("Predicted Values")
+
+    # Configure colorbar in ax 2
+    axs[1] = fig.colorbar(axs[0].collections[0], cax = axs[1])
+    fig.tight_layout()
+    return fig, axs
+
 
 # Now we need to define the repeated k-folder cross validation technique
 # First, define the k-folder function:
@@ -286,30 +352,22 @@ def repeated_k_fold(estimator, dataX, dataY, reps = 10, folds = 10, parameters =
   return list(classifier_list), list(accuracies)
 
 from timeit import default_timer as timer
-classifierNumbers = [1, 10, 50, 100, 200, 500, 1000]
-totalClassifiers = len(classifierNumbers)
-estimators = [adaBoostMC_SVC(), adaBoostMC()]
-totalEstimators = len(estimators)
-gridSearchStump = np.full([totalClassifiers, 2], np.nan)
-gridSearchSVM = np.full([totalClassifiers, 2], np.nan)
+classifierNumbersStump = [1, 10, 50, 100, 200, 500, 1000]
+if test:
+  classifierNumbersStump = [1, 10, 50]
+if moreThan1Hour:
+  classifierNumbersStump.append([2000])
+totalClassifiersStump = len(classifierNumbersStump)
+gridSearchStump = np.full([totalClassifiersStump, 2], np.nan)
 
-estimator = adaBoostMC_SVC()
-for i in range(totalClassifiers):
-  classNum = classifierNumbers[i]
-  print('Number of Classifiers: {0:d}'.format(classNum))
-  parameters = {'classifierNumber':classNum}
-  timerStart = timer()
-  classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
-  timerEnd = timer()
-  totalTime = timerEnd - timerStart
-  gridSearchSVM[i, 0] = np.mean(accuracies) # save the mean of the accuracies
-  gridSearchSVM[i, 1] = totalTime # save the time it took to compute
-  print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.4f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100, np.var(accuracies), totalTime))
 
 estimator = adaBoostMC()
-for i in range(totalClassifiers):
-  classNum = classifierNumbers[i]
-  print('Number of Classifiers: {0:d}'.format(classNum))
+if verbose:
+  print('Trying adaBoostMC with stumps')
+for i in range(totalClassifiersStump):
+  classNum = classifierNumbersStump[i]
+  if verbose:
+    print('Number of Classifiers: {0:d}'.format(classNum))
   parameters = {'classifierNumber':classNum}
   timerStart = timer()
   classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
@@ -317,114 +375,161 @@ for i in range(totalClassifiers):
   totalTime = timerEnd - timerStart
   gridSearchStump[i, 0] = np.mean(accuracies) # save the mean of the accuracies
   gridSearchStump[i, 1] = totalTime # save the time it took to compute
-  print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.4f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100, np.var(accuracies), totalTime))
+  if verbose:
+    print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.4f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100, np.var(accuracies), totalTime))
+
+
+classifierNumbersSVM = [1, 10, 50]
+if test:
+  classifierNumbersSVM = [1, 5]
+if moreThan1Hour:
+  classifierNumbersSVM.append([100])
+
+totalClassifiersSVM = len(classifierNumbersSVM)
+gridSearchSVM = np.full([totalClassifiersSVM, 2], np.nan)
+
+estimator = adaBoostMC_SVC()
+if verbose:
+  print('Trying adaBoostMC with SVM')
+for i in range(totalClassifiersSVM):
+  classNum = classifierNumbersSVM[i]
+  if verbose:
+    print('Number of Classifiers: {0:d}'.format(classNum))
+  parameters = {'classifierNumber':classNum}
+  timerStart = timer()
+  classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
+  timerEnd = timer()
+  totalTime = timerEnd - timerStart
+  gridSearchSVM[i, 0] = np.mean(accuracies) # save the mean of the accuracies
+  gridSearchSVM[i, 1] = totalTime # save the time it took to compute
+  if verbose:
+    print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.4f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100, np.var(accuracies), totalTime))
+
+# Select the best performing classifier
+maxStumpPos = np.argmax(gridSearchStump[:,0])
+maxSVMPos = np.argmax(gridSearchSVM[:,0])
+
 
 classifiers = []
 columns = ['accuracy', 'time_to_compute']
+classifierComparisonAcc = []
+classifierComparisonTime = []
 
-# adaboostMC using SAMME, 200 classifiers
-parameters = {'classifierNumber':200, 'maxDepth':1}
-classifiers.append('SAMME_AdaBoost_200')
-estimator = adaBoostMC()
-timerStart = timer()
-classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
-timerEnd = timer()
-totalTime = timerEnd - timerStart
-classifierInfo = np.zeros((1,2))
-classifierInfo[0,0] = np.mean(accuracies)
-classifierInfo[0,1] = totalTime
-classifierComparison = classifierInfo
-# classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
-print('Time to compute:', totalTime) # show time it took to compute
-print('Mean accuracy:', np.mean(accuracies))
+#Check which had the highest accuracy:
+if gridSearchStump[maxStumpPos, 0] >= gridSearchSVM[maxSVMPos, 0]:
+  comparisonEstimator = adaBoostMC()
+  classifiers.append('SAMME_stumps')
+  chosenParams = {'classifierNumber':classifierNumbersStump[maxStumpPos]}
+  chosenEstimator = 'stumps'
+else:
+  comparisonEstimator = adaBoostMC_SVC()
+  classifiers.append('SAMME_SVM')
+  chosenParams = {'classifierNumber':classifierNumbersSVM[maxSVMPos]}
+  chosenEstimator = 'SVM'
 
-# adaboostMC using SAMME, 500 classifiers
-parameters = {'classifierNumber':500, 'maxDepth':1}
-classifiers.append('SAMME_AdaBoost_500')
-estimator = adaBoostMC()
+#calculate SAMME accuracy and time
+if verbose:
+  print('Calculating SAMME using', chosenEstimator)
+estimator = comparisonEstimator
+estimator.set_params(**chosenParams)
 timerStart = timer()
-classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
+estimator.fit(trainData[:,:-1], trainData[:,-1])
+accuracies = estimator.score(testData[:,:-1], testData[:,-1])
 timerEnd = timer()
+confMat = estimator.confusionMat(testData[:,:-1], testData[:,-1]) # Calculate the confusion matrix
+fig, ax = estimator.plotConfMat(testData[:,:-1], testData[:,-1]) # Plot the confusion matrix
+plt.show()
+if test:
+  plt.savefig('confusionMatrix.png', bbox_inches = 'tight')
 totalTime = timerEnd - timerStart
-classifierInfo = np.zeros((1,2))
-classifierInfo[0,0] = np.mean(accuracies)
-classifierInfo[0,1] = totalTime
-classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
-print('Time to compute:', totalTime) # show time it took to compute
-print('Mean accuracy:', np.mean(accuracies))
-
-# adaboostMC using SAMME, 800 classifiers
-parameters = {'classifierNumber':800, 'maxDepth':1}
-classifiers.append('SAMME_AdaBoost_800')
-estimator = adaBoostMC()
-timerStart = timer()
-classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
-timerEnd = timer()
-totalTime = timerEnd - timerStart
-classifierInfo = np.zeros((1,2))
-classifierInfo[0,0] = np.mean(accuracies)
-classifierInfo[0,1] = totalTime
-classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
-print('Time to compute:', totalTime) # show time it took to compute
-print('Mean accuracy:', np.mean(accuracies))
-
-# adaboostMC_SVC using C = 1, 100 classifiers
-parameters = {'classifierNumber':100, 'C':1}
-classifiers.append('SVC_AdaBoost_100')
-estimator = adaBoostMC_SVC()
-timerStart = timer()
-classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1], parameters = parameters)
-timerEnd = timer()
-totalTime = timerEnd - timerStart
-classifierInfo = np.zeros((1,2))
-classifierInfo[0,0] = np.mean(accuracies)
-classifierInfo[0,1] = totalTime
-classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
-print('Time to compute:', totalTime) # show time it took to compute
-print('Mean accuracy:', np.mean(accuracies))
+classifierComparisonAcc.append(np.mean(accuracies))
+classifierComparisonTime.append(totalTime)
+if verbose:
+  print('Time to compute:', totalTime) # show time it took to compute
+  print('Mean accuracy:', np.mean(accuracies))
 
 # Multiclass SVC as 1-vs-1
 from sklearn.svm import SVC
 classifiers.append('1v1_SVM')
+if verbose:
+  print('Calculating 1vs1 SVM using C=1')
 estimator = SVC()
 timerStart = timer()
-classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1])
+estimator.fit(trainData[:,:-1], trainData[:,-1])
+accuracies = estimator.score(testData[:,:-1], testData[:,-1])
 timerEnd = timer()
 totalTime = timerEnd - timerStart
-classifierInfo = np.zeros((1,2))
-classifierInfo[0,0] = np.mean(accuracies)
-classifierInfo[0,1] = totalTime
-classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
-print('Time to compute:', totalTime) # show time it took to compute
-print('Mean accuracy:', np.mean(accuracies))
+classifierComparisonAcc.append(np.mean(accuracies))
+classifierComparisonTime.append(totalTime)
+if verbose:
+  print('Time to compute:', totalTime) # show time it took to compute
+  print('Mean accuracy:', np.mean(accuracies))
 
 # Random forest
 from sklearn.ensemble import RandomForestClassifier
 classifiers.append('Random_Forest')
+if verbose:
+  print('Calculating Random Forest using stumps')
 estimator = RandomForestClassifier(max_depth=1, random_state=0)
 timerStart = timer()
-classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1])
+estimator.fit(trainData[:,:-1], trainData[:,-1])
+accuracies = estimator.score(testData[:,:-1], testData[:,-1])
 timerEnd = timer()
 totalTime = timerEnd - timerStart
-classifierInfo = np.zeros((1,2))
-classifierInfo[0,0] = np.mean(accuracies)
-classifierInfo[0,1] = totalTime
-classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
-print('Time to compute:', totalTime) # show time it took to compute
-print('Mean accuracy:', np.mean(accuracies))
+classifierComparisonAcc.append(np.mean(accuracies))
+classifierComparisonTime.append(totalTime)
+if verbose:
+  print('Time to compute:', totalTime) # show time it took to compute
+  print('Mean accuracy:', np.mean(accuracies))
 
 from sklearn.neighbors import KNeighborsClassifier
 classifiers.append('KNN')
+if verbose:
+  print('Calculating KNN with K=1')
 estimator = KNeighborsClassifier(n_neighbors=1)
 timerStart = timer()
-classifier, accuracies = repeated_k_fold(estimator, trainData[:,:-1], trainData[:,-1])
+estimator.fit(trainData[:,:-1], trainData[:,-1])
+accuracies = estimator.score(testData[:,:-1], testData[:,-1])
 timerEnd = timer()
-classifierInfo = np.zeros((1,2))
-classifierInfo[0,0] = np.mean(accuracies)
-classifierInfo[0,1] = totalTime
-classifierComparison = np.concatenate([classifierComparison, classifierInfo], axis = 0)
-print('Time to compute:', totalTime) # show time it took to compute
-print('Mean accuracy:', np.mean(accuracies))
+totalTime = timerEnd - timerStart
+classifierComparisonAcc.append(np.mean(accuracies))
+classifierComparisonTime.append(totalTime)
+if verbose:
+  print('Time to compute:', totalTime) # show time it took to compute
+  print('Mean accuracy:', np.mean(accuracies))
+
+classifierAcc = np.asarray(classifierComparisonAcc)
+classifierTime = np.asarray(classifierComparisonTime)
+classifierComparison = np.concatenate([np.reshape(classifierAcc,(-1, 1)), np.reshape(classifierTime,(-1, 1))], axis = 1)
+
+# np.reshape(classifierAcc,(-1, 2))
 
 df_classifierComparison = pd.DataFrame(classifierComparison, index = classifiers, columns = columns)
-# df_classifierComparison.to_excel("classifierComparison.xlsx")
+df_classifierComparison.to_excel("classifierComparison.xlsx")
+
+def autolabel(ax, bars):
+    """Attach a text label above each bar in *bars*, displaying its height."""
+    for rect in bars:
+        height = rect.get_height()
+        ax.annotate('{0:.2f}'.format(height),
+                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')
+        
+fig, axs = plt.subplots(nrows = 1, ncols = 2, figsize = figure_size, gridspec_kw = {'wspace':0.25})
+x = np.arange(len(classifiers))  # the label locations
+width = 0.35  # the width of the bars
+colors = ["tab:blue", "tab:green"]
+for ax, info, color, letter, lbl in zip(axs, [100 * classifierAcc, classifierTime], colors, ['(a)', '(b)'], ['Accuracy (%)', 'Time (s)']):
+  bars = ax.bar(x - width/2, info, width, color=color, label = lbl)
+  # Add some text for labels, title and custom x-axis tick labels, etc.
+  ax.set_ylabel(lbl)
+  ax.set_xticks(x)
+  ax.set_xticklabels(classifiers, fontsize=14, rotation=45)
+  ax.set_xlabel(letter)
+  autolabel(ax, bars)
+plt.show()
+if test:
+  plt.savefig('classifier.png', bbox_inches = 'tight')
+  print('done!')
