@@ -22,9 +22,9 @@ sns.set_style("darkgrid") # Set seaborn's dark grid style
 sns.set_context("poster") # Make the font of the plots bigger
 figure_size = [20.0, 10.0]
 verbose = True
-moreThan1Hour = False # Change this flag to compute the 10-times 10-fold cross-validation parameters that take more than 1 hour
+moreThan1Hour = True # Change this flag to compute the 10-times 10-fold cross-validation parameters that take more than 1 hour
 test = False # For testing all the algorithms with small parameters so it doesn't take long to compute
-saveResults = True # For saving the results into a file
+saveResults = False # For saving the results into a file
 
 # Try getting the file locally
 # df_features = pd.read_csv('features.txt', delim_whitespace=True,  header = None) # Load file
@@ -403,12 +403,12 @@ def repeated_k_fold(estimator, dataX, dataY, reps = 10, folds = 10, parameters =
   return list(classifier_list), list(accuracies)
 
 from timeit import default_timer as timer # import the timer
-classifierNumbersStump = [1, 10, 50, 100, 200, 500]
+classifierNumbersStump = [2, 5, 10, 50, 100, 200, 500]
 if test:
-  classifierNumbersStump = [1, 10, 50]
+  classifierNumbersStump = [2, 5, 10, 50]
 if moreThan1Hour:
-  classifierNumbersStump.append([1000])
-  classifierNumbersStump.append([2000])
+  classifierNumbersStump.append(1000)
+  classifierNumbersStump.append(2000)
 totalClassifiersStump = len(classifierNumbersStump)
 gridSearchStump = np.full([totalClassifiersStump, 2], np.nan)
 
@@ -431,9 +431,9 @@ for i in range(totalClassifiersStump):
     print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.4f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100, np.var(accuracies), totalTime))
 
 
-classifierNumbersSVM = [1, 10]
+classifierNumbersSVM = [2, 5, 10]
 if test:
-  classifierNumbersSVM = [1, 5]
+  classifierNumbersSVM = [2, 5]
 if moreThan1Hour:
   classifierNumbersSVM.append([50])
   classifierNumbersSVM.append([100])
@@ -458,13 +458,22 @@ for i in range(totalClassifiersSVM):
   if verbose:
     print('10 times 10 fold adaboost: Average accuracy = {0:.2f}%, variance = {1:.4f}, time to compute: {2:.2f} seconds'.format(np.mean(accuracies) * 100, np.var(accuracies), totalTime))
 
+
 # Select the best performing classifier
 maxStumpPos = np.argmax(gridSearchStump[:,0])
 maxSVMPos = np.argmax(gridSearchSVM[:,0])
 
-
 classifiers = []
 columns = ['accuracy', 'time_to_compute']
+
+df_SAMME_stumps = pd.DataFrame(gridSearchStump, index = classifierNumbersStump, columns = columns)
+df_SAMME_SVM = pd.DataFrame(gridSearchSVM, index = classifierNumbersSVM, columns = columns)
+
+print('The values obtained for the SAMME stumps were:')
+print(df_SAMME_stumps)
+print('The values obtained for the SAMME SVM were:')
+print(df_SAMME_SVM)
+
 classifierComparisonAcc = []
 classifierComparisonTime = []
 
@@ -576,15 +585,18 @@ if verbose:
   print('Time to compute:', totalTime) # show time it took to compute
   print('Mean accuracy:', np.mean(accuracies))
 
+# Create the classifier comparison DataFrame
 classifierAcc = np.asarray(classifierComparisonAcc)
 classifierTime = np.asarray(classifierComparisonTime)
 classifierComparison = np.concatenate([np.reshape(classifierAcc,(-1, 1)), np.reshape(classifierTime,(-1, 1))], axis = 1)
 
 df_classifierComparison = pd.DataFrame(classifierComparison, index = classifiers, columns = columns)
-print(df_classifierComparison)
+print(df_classifierComparison) # Print the classifier comparison
 if test or saveResults:
   df_classifierComparison.to_excel("classifierComparison.xlsx")
 
+
+# Create the 
 def autolabelAcc(ax, bars):
     """Attach a text label above each bar in *bars*, displaying its height."""
     for rect in bars:
@@ -606,19 +618,18 @@ def autolabelTime(ax, bars):
                     ha='center', va='bottom')
         
 fig, axs = plt.subplots(nrows = 1, ncols = 2, figsize = figure_size, gridspec_kw = {'wspace':0.25})
-x = np.arange(len(classifiers))  # the label locations
-width = 0.35  # the width of the bars
+x = np.arange(len(classifiers))  # for the location of the labels
+width = 0.35  # For the widths of the bars
 colors = ["tab:blue", "tab:green"]
 bars = []
 for ax, info, color, letter, lbl in zip(axs, [100 * classifierAcc, classifierTime], colors, ['(a)', '(b)'], ['Accuracy (%)', 'Time (s)']):
-  bars.append(ax.bar(x - width/2, info, width, color=color, label = lbl))
-  # Add some text for labels, title and custom x-axis tick labels, etc.
-  ax.set_ylabel(lbl)
-  ax.set_xticks(x)
-  ax.set_xticklabels(classifiers, rotation=45)
-  ax.set_xlabel(letter)
-autolabelAcc(axs[0], bars[0])
-autolabelTime(axs[1], bars[1])
+  bars.append(ax.bar(x - width/2, info, width, color=color, label = lbl)) # Create the barplot
+  ax.set_ylabel(lbl) # set the y label
+  ax.set_xticks(x) # create the x ticks
+  ax.set_xticklabels(classifiers, rotation=45) # set the values for the x ticks, rotated
+  ax.set_xlabel(letter) # set the label
+autolabelAcc(axs[0], bars[0]) # autolabel the barplots
+autolabelTime(axs[1], bars[1]) # autolabel the barplots
 
 plt.show()
 if test or saveResults:
