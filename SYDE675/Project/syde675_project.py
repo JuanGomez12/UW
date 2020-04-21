@@ -435,8 +435,8 @@ classifierNumbersSVM = [2, 5, 10]
 if test:
   classifierNumbersSVM = [2, 5]
 if moreThan1Hour:
-  classifierNumbersSVM.append([50])
-  classifierNumbersSVM.append([100])
+  classifierNumbersSVM.append(50)
+  classifierNumbersSVM.append(100)
 
 totalClassifiersSVM = len(classifierNumbersSVM)
 gridSearchSVM = np.full([totalClassifiersSVM, 2], np.nan)
