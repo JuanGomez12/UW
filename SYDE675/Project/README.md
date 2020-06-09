@@ -1,0 +1,1 @@
+The accuracy and time performance of an AdaBoost SAMME algorithm using both stumps and SVM as the base classifier for the algorithm were compared using the Human Activity Dataset. The best performing algorithm was using stumps as the base classifier. This algorithm was then compared to other classifiers, mainly KNN, SVM and random forest.
