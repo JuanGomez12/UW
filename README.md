@@ -4,7 +4,7 @@ Electrical and Computer Engineering:
  - ECE608: Quantitative Methods in Biomedical Engineering
  - ECE656: Database Systems
  - ECE650: Methods and Tools for Software Engineering
- - ECE657A: Data and Knowledge Modelling and Aanalysis
+ - ECE657A: Data and Knowledge Modelling and Analysis
  
 System Design:
  - SYDE675: Pattern Recognition
