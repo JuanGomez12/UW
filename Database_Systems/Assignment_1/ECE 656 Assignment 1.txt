@@ -1,0 +1,234 @@
+source ~/Desktop/lahman2016.sql; #Load database with sql file in desktop
+
+## 1.
+Create SQL queries to answer the following questions: 
+(a) How many players have an unknown birthdate?
+(b) Are more players in the Hall of Fame dead or alive? (Output the number alive minus the number dead)
+(c) What is the name and total pay of the player with the largest total salary?
+(d) What is the average number of Home Runs a player has?
+(e) If we only count players who got at least 1 Home Run, what is the average number of Home Runs a player has?
+(f) If we define a player as a good batter if they have more than the average number of Home Runs, and a player is a good Pitcher if they have more than the average number of ShutOut games, then how many players are both good batters and good pitchers? 
+
+
+#Answers
+(a) By unknown birthdates it will be assumed that the day, and/or month and/or year of its birthdate is not known:
+SELECT playerID, nameFirst, nameGiven, nameLast, birthYear, birthMonth, birthDay
+FROM Master
+WHERE birthYear=0
+OR birthMonth=0
+OR birthday=0; #Show player IDs and birth dates 
+
+(b) A relation between the Master table and the HallOfFame table must be made, in order to combine the HallOfFame data with the information on the players' death dates. Also, the count of dead and alive players must be made and substracted between them ("alive minus dead").
+
+
+############################Does the same player appear multiple times in the HOF? CHECK
+
+/*
+#Players with an undefined death date ("alive")
+SELECT Master.playerID as aliveID, nameFirst, nameLast, deathYear 
+FROM Master
+JOIN HallOfFame
+ON Master.playerID = HallOfFame.PlayerID
+WHERE deathYear <= '';
+
+#Players with a defined death date ("dead")
+SELECT Master.playerID AS deadID, nameFirst, nameLast, deathYear 
+FROM Master
+JOIN HallOfFame
+ON Master.playerID = HallOfFame.PlayerID
+WHERE deathYear > ''
+ORDER BY deathYear ASC;
+*/
+
+SELECT SUM(if(deathYear<= '', 1, 0)) - SUM(if(deathYear> '', 1, 0)) AS aliveMinusDeadPlayers
+FROM Master
+JOIN HallOfFame
+ON Master.playerID = HallOfFame.PlayerID;
+
+### (c)
+The tables Master and Salaries must be related (joined) in order to calculate the total salaries of the players. There will also be repeated instances of the same player winning playing multiple years and in different teams, so the players must be grouped into one instance each, to be able of finding the total salary.
+
+SELECT Master.playerID as playID, nameFirst, nameLast, sum(salary) AS totalSalary
+FROM Master
+JOIN Salaries
+ON Master.playerID = Salaries.playerID
+GROUP BY playID, nameFirst, nameLast
+ORDER BY totalSalary DESC
+LIMIT 1;
+
+### (d)
+The average home runs per player can be calculated by finding the total value of home runs found in the batting table divided by counting all the (distinct) players present in the same table.
+
+SELECT AVG(sumHR) AS playerAvgHR
+FROM ((SELECT playerID AS pID, sum(HR) AS sumHR FROM Batting
+group by playerID) AS calcValues);
+
+This returns an average home run value of 15.29 between 18915 players. The problem with this approach is that it assumes that the Batting table has all the players have batted throughout their career in baseball, which might not be true for some pitchers or fielders. Another approach would be to count all the homeruns present in the Teams table and divide it by the total number of players in the Master table, without counting the managers who where not players. This can be achieved with:
+
+SELECT ((SELECT sum(HR) AS sumHR from Teams)/(select count(Players.playerID) AS PCount from (SELECT Mas.playerID from Master AS Mas
+LEFT OUTER JOIN (SELECT playerID, plyrMgr from Managers WHERE plyrMgr like 'N') AS Man
+on Mas.playerID = Man.playerID WHERE Man.playerID IS NULL) as Players)) as avgHR;
+
+This in turn gives us an average home run per player value of 15.58 between 18573 players. The difference between both averages is about 0.3, or almost 2%, which could be considered almost the same values for both of the approaches taking into account that there are more than 18,000 players in a database that has statistical values taken as far back as the second half of the 1800's.
+
+### (e)
+In order to find the average home runs per player, with the condition of only counting players that have had at least one home run, the WHERE clause can be used in order to filter out the players with a HR score of 0. Using the first approach mentioned in the last question it can be found that:
+
+Select sum(calcValues.sumHR)/COUNT(calcValues.pID) as playerAvgHR
+FROM ((SELECT playerID AS pID, sum(HR) AS sumHR from Batting
+where HR>0
+group by playerID) as calcValues);
+
+The same cannot be done using the second approach, as it uses the total value of Home Runs per team per year, not the home runs per player and therefore it cannot be found what players to excldue from the count.
+
+### (f)
+(f) If we define a player as a good batter if they have more than the average number of Home Runs, and a player is a good Pitcher if they have more than the average number of ShutOut games, then how many players are both good batters and good pitchers? 
+
+#Average value of home runs per batter
+Select sum(calcValues.sumHR)/COUNT(calcValues.pID) as playerAvgHR
+FROM ((SELECT playerID AS pID, sum(HR) AS sumHR from Batting
+group by playerID) as calcValues);
+
+#Average value of ShutOuts per pitcher
+Select sum(pitValues.sumSHO)/COUNT(pitValues.pitchID) as avgSHO
+FROM ((SELECT playerID AS pitchID, sum(SHO) AS sumSHO from Pitching
+group by playerID) as pitValues);
+
+
+(Select sum(pitValues.sumSHO)/COUNT(pitValues.pitchID) as avgSHO
+FROM ((SELECT playerID AS pitchID, sum(SHO) AS sumSHO from Pitching
+group by playerID) as pitValues)) as avgPitcher;
+
+#####Partially Working:
+SELECT playerID AS pID, sum(HR) AS totHR
+from Batting
+group by pID
+having totHR > (select sum(calcValues.sumHR)/COUNT(calcValues.pID) as playerAvgHR
+FROM (SELECT playerID AS pID, sum(HR) AS sumHR from Batting
+group by playerID) as calcValues);
+######
+
+####Working
+SELECT B.playerID AS pID, M.nameFirst, M.nameLast, sum(B.HR) AS totHR, sum(P.SHO) as totSHO
+from Batting as B
+inner join Pitching as P
+on B.playerID = P.playerID
+inner join Master as M
+on M.playerID = B.playerID
+group by pID, nameFirst, nameLast
+having totHR > (select sum(calcValues.sumHR)/COUNT(calcValues.pID) as playerAvgHR
+FROM (SELECT playerID AS pID, sum(HR) AS sumHR from Batting
+group by playerID) as calcValues)
+and totSHO > (Select sum(pitValues.sumSHO)/COUNT(pitValues.pitchID) as avgSHO
+FROM (SELECT playerID AS pitchID, sum(SHO) AS sumSHO from Pitching
+group by playerID) as pitValues)
+order by totHR DESC, totSHO DESC;
+#####Done
+
+## 2.
+The SQL file has a very large number of INSERT statements in order to load the data into the database.  The CSV files, by contrast, have no associated SQL code to load the data into the database.  Create a LOAD statement that will load the data for the Fielding CSV (Fielding.csv) into its associated table.  You should verify that your LOAD statement operates correctly and issues no warnings.
+
+The LOAD statement must include the LOCAL parameter as it is being loaded from a local computer to the server. The CSV has each field separated by a comma, and each row of data separated by a new line and a carriage return (CR). This should be included as well so that the file loads the values correctly (some columns become seemingly distorted after using the SELECT * query if the CR is not included). The first row contains a row of headers, which can be ignored during the loading of the file with the IGNORE X LINES parameter. Some of the values in the fields that have a type INT are missing, and would cause an error loading the file if the sql_mode is set to a restrictive value. This can be avoided by specifying that the "blank" values of the file be replaced with a value or NULL using the SET clause. The REPLACE parameter would make the new input rows replace the existing ones, but this only happens if the Table has a Primary Key already associated to it. In the case of the Fielding Table it will generate a new row of almost identical data instead of replacing it as the table is missing a Primary Key.
+
+LOAD DATA LOCAL INFILE '~/Desktop/Fielding.csv' REPLACE INTO TABLE Fielding
+  FIELDS TERMINATED BY ',' lines terminated by '\r\n' IGNORE 1 LINES
+(playerID, yearID,stint,teamID,lgID,POS,@vG,GS,InnOuts,@vPO,@vA,@vE,@vDP,PB,WP,SB,CS,ZR)
+SET
+G = nullif(@vG,''),
+PO = nullif(@vPO,''),
+A = nullif(@vA,''),
+E = nullif(@vE,''),
+DP = nullif(@vDP,'');
+
+
+### 3.
+
++----------------------+
+| Tables_in_lahman2016 |
++----------------------+
+| AllstarFull          |
+| Appearances          |
+| AwardsManagers       |
+| AwardsPlayers        |
+| AwardsShareManagers  |
+| AwardsSharePlayers   |
+| Batting              |
+| BattingPost          |
+| CollegePlaying       |
+| Fielding             |
+| FieldingOF           |
+| FieldingOFsplit      |
+| FieldingPost         |
+| HallOfFame           |
+| HomeGames            |
+| Managers             |
+| ManagersHalf         |
+| Master               |
+| Parks                |
+| Pitching             |
+| PitchingPost         |
+| Salaries             |
+| Schools              |
+| SeriesPost           |
+| Teams                |
+| TeamsFranchises      |
+| TeamsHalf            |
++----------------------+
+
+#First the Master table
+As mentioned in the readme for the database, the playerID field in the Master table gives a unique code for each player, and can be used as the Primary Key (PK) for that table.
+
+ALTER TABLE Master
+ADD PRIMARY KEY (playerID);
+
+The Batting, Pitching, and Fielding do not benefit of the uniqueness of playerID, as a player can play multiple years in the same teams or in different teams. Looking at the data in the tables it seems that the playerID, yearID and stint could be used as a PK for these tables. 
+
+This tables can then be assigned a unique key with the constraints set to its playerID, yearID, stint (or round in the case of the Post tables), teamID and lgID.
+
+ALTER TABLE Batting
+ADD PRIMARY KEY (playerID, yearID, stint);
+ALTER TABLE Pitching
+ADD PRIMARY KEY (playerID, yearID, stint);
+
+The problem with these fields is that in the Fielding table there are repeated values for some players as they might have played in the same game and year but on different positions (e.g. "addybo01" played in 1871 in second base and in shortstop during the same game). This means that for the Fielding table another field must be selected to guarantee uniqueness in the PK's values. This seems to be achievable using the POS field of the Fielding Tables in addition to the previously selected playerID, yearID and stint values. This would be enough for the original Fielding table, but the table being currently used has duplicate values that resulted from the LOAD statement used on Question 2 of Part 1.
+
+ALTER TABLE Fielding
+ADD PRIMARY KEY (playerID, yearID, stint, POS);
+
+ALTER TABLE BattingPost
+ADD PRIMARY KEY (yearID, round, playerID, teamID, lgID);
+ALTER TABLE PitchingPost
+ADD PRIMARY KEY (yearID, round, playerID, teamID, lgID);
+ALTER TABLE FieldingPost
+ADD PRIMARY KEY (yearID, round, playerID, teamID, lgID);
+
+For the AllstarFull table, the fields of playerID and yearID is assumed that can be used as a primary key, as it might be possible for a player to be in that game in various years, but would not play in different teams or leagues in the same year. This returned an error as there where duplicate values for the PK, and after looking at the table to confirm this, it can be seen that for example aparilu01 did indeed play two AllStar games in 1959. It was found afterwards that there were a couple of years after World War II in which the All Star Games were played two times per year instead of the (assumed) one time per year. This means that the gameNum field must also be included in the PK constraint.
+
+ALTER TABLE AllstarFull
+ADD PRIMARY KEY (playerID, yearID, gameNum);
+
+For the HallOfFame table, the playerID, yearID and votedBy can be used as it can be assumed that a player cannot be nominated to the Hall of Fame more than one time per year per each voting method.
+
+ALTER TABLE HallOfFame
+ADD PRIMARY KEY (playerID, yearID, votedBy);
+
+For the Managers table it is reasonable to assume that the primary key be defined by the playerID, yearID, teamID and lgID. After looking at the table it can be seen that inseason should also be included in the PK, as for example in 1968 lopezal01 was the third and fifth manager in the CHA team.
+
+ALTER TABLE Managers
+ADD PRIMARY KEY (playerID, yearID, teamID, lgID, inseason);
+
+For the Teams table the values of yearID, lgId, teamID, franchID and divID should be used. It seems that yearId and teamID are sufficient to comply with the Primary Key
+
+ALTER TABLE Teams
+ADD PRIMARY KEY (yearID, lgId, teamID, franchID, divID)
+
+The TeamsFranchises table can have a PK based on its franchID field:
+
+ALTER TABLE TeamsFranchises
+ADD PRIMARY KEY (franchID);
+
+
+
+
+
+
