@@ -1,5 +1,5 @@
--- Natalia Hoyos 20805370
--- Juan Manuel Gomez 20805369
+-- Natalia Hoyos
+-- Juan Manuel Gomez
 
 # SET @db = 'lahman2016';
 # USE lahman2016;
