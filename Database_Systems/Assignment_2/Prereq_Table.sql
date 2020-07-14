@@ -1,0 +1,400 @@
+insert into CoursePrereq values
+
+
+
+
+
+('BIOC494', 'ARCH776'),
+
+
+('ARCH526', 'PEAC650'),
+('KINE255', 'CEE472'),
+
+
+
+
+
+('EART795', 'JEWI287'),
+
+
+
+
+('EED213', 'EED236'),
+
+
+
+
+('ARCH732', 'GLOB748'),
+('GEO370', 'ECON198'),
+
+('STAT048', 'POLS444'),
+
+
+('MATH312', 'ECON372'),
+
+('RECR817', 'THEO727'),
+
+
+
+('CHE325', 'CS564'),
+('SOWO369', 'MSCI579'),
+
+('SOWO680', 'SI322'),
+
+('COMB117', 'CULT299'),
+
+('OPTO322', 'ACC895'),
+
+
+('ANTH564', 'MATH618'),
+
+
+
+
+('C&O458', 'GEO547'),
+
+
+
+
+
+
+
+
+('FRCH872', 'PSYC427'),
+
+('MED806', 'MATH436'),
+('FRCH591', 'DESI524'),
+
+('BME811', 'SDS565'),
+
+
+
+
+('MATH718', 'THEO509'),
+
+
+
+
+('SOWO364', 'MUSI595'),
+('SOWO240', 'SEX619'),
+
+
+
+('NANE515', 'MUSI212'),
+
+('RELI402', 'MSCI651'),
+
+('GLOB052', 'ENVK340'),
+
+
+
+
+('JEWI528', 'ECON273'),
+
+('ANTH309', 'PSYC828'),
+
+
+
+
+('ACC318', 'PHIL791'),
+('SPAN428', 'THEO338'),
+
+('HIST805', 'SEX405'),
+
+
+('LEGA240', 'FRCH423'),
+('CHEM020', 'CS147'),
+
+
+
+
+('CHEM206', 'PSYC298'),
+('SEX333', 'ECE161'),
+
+
+
+
+
+
+
+
+
+
+
+('BIOC785', 'GERM195'),
+('PLAN513', 'BME465'),
+
+
+('SOFT192', 'COMB316'),
+
+
+('SDS366', 'ITAL136'),
+
+
+
+
+
+('BIOL199', 'LEGA226'),
+
+('SOFT973', 'CS325'),
+('THEO098', 'BME847'),
+
+('PHIL237', 'COMB449'),
+
+
+
+
+
+('KINE375', 'THEO880'),
+
+('ARCH113', 'FINE150'),
+
+
+
+('SYDE419', 'CULT796'),
+
+
+
+
+('RELI801', 'SYDE581'),
+
+
+
+
+
+('ENVK372', 'SYDE188'),
+
+
+('NANE757', 'SDS818'),
+
+('CS853', 'FINE792'),
+
+
+
+
+('STAT436', 'GEO749'),
+('STAT433', 'ECE128'),
+('ECE548', 'MATH517'),
+('COMM594', 'GEO406'),
+
+
+
+
+('ENG121', 'THEO141'),
+
+
+('PEAC608', 'WOME873'),
+
+
+('PHIL275', 'ECON579'),
+
+
+
+
+
+
+('PHIL234', 'C&O828'),
+
+
+
+
+
+
+('SDS770', 'SI472'),
+('INTA086', 'ERS236'),
+('SPAN669', 'DESI571'),
+
+
+('ECON782', 'MATH728'),
+
+('PHYS606', 'CEE227'),
+
+('OPTO570', 'CULT853'),
+
+
+('DESI606', 'SOWO888'),
+
+('ECE035', 'THEO267'),
+
+('SDS890', 'ACC308'),
+
+
+('DESI348', 'ENVK543'),
+
+
+
+('PEAC366', 'SOWO803'),
+('PHIL395', 'ECON652'),
+
+
+
+
+
+
+('MSCI128', 'GEO206'),
+
+('INTA600', 'PLAN821'),
+('COMM018', 'COMM251'),
+('OPTO523', 'PSYC360'),
+
+
+
+
+('STAT790', 'ENG681'),
+
+('OPTO264', 'SOWO165'),
+
+
+('MSCI392', 'FINE152'),
+
+
+('PUHE172', 'ANTH459'),
+('ACC633', 'PLAN437'),
+
+
+
+
+
+('SYDE939', 'MED548'),
+
+
+('MATH297', 'LANG172'),
+
+
+
+
+
+
+('PHIL321', 'SYDE258'),
+('PUHE109', 'ENVK444'),
+('MUSI133', 'HIST747'),
+
+('COMM399', 'HIST665'),
+
+
+
+
+
+
+
+('MATH841', 'GERM396'),
+
+('ITAL834', 'SPAN161'),
+('CLAS624', 'PHIL753'),
+
+
+
+
+
+
+('SOWO149', 'GERM587'),
+
+
+
+
+
+
+('SDS633', 'CHE302'),
+
+
+('PHAR837', 'ENVK826'),
+
+
+('CS734', 'MUSI428'),
+
+
+('ANTH905', 'SI759'),
+
+
+('C&O676', 'EAS221'),
+
+('CS588', 'DESI363'),
+
+
+('BME462', 'ECE775'),
+
+
+('OPTO346', 'GEO422'),
+
+('SPAN579', 'THEO749'),
+
+
+
+
+
+('AVIA968', 'GLOB541'),
+
+
+('ENG513', 'LEGA295'),
+('C&O972', 'ERS619'),
+('BME620', 'SEX158'),
+
+
+
+('COMM966', 'MED492'),
+
+
+
+('PHAR653', 'GEO295'),
+('PHYS986', 'PEAC562'),
+
+
+('ITAL220', 'COMM103'),
+
+
+
+
+
+
+('EART824', 'ENG722'),
+('LEGA799', 'MATH177'),
+('GEO965', 'INTA508'),
+('GEO515', 'CLAS664'),
+
+('LANG397', 'SYDE840'),
+
+
+
+('SOWO887', 'MATH320'),
+('EED992', 'ANTH364'),
+
+
+('CS869', 'PEAC697'),
+('MUSI361', 'NANO877'),
+
+('SOWO153', 'FRCH836'),
+
+('DESI718', 'CEE447'),
+
+('WOME844', 'FRCH320'),
+('ARCH303', 'EAS339'),
+
+('SPAN642', 'BME491'),
+
+('PLAN727', 'MATH471'),
+
+
+
+('GEO195', 'SOFT371'),
+
+
+
+('ECON400', 'GEO544'),
+
+('NANE923', 'MATH606'),
+
+('SI758', 'ENG200'),
+('GERM780', 'MUSI851'),
+
+('SEX239', 'MSCI588'),
+
+
+
+
+
+('CULT197', 'ECE709'),
+
+
+
+('HIST647', 'PLAN442'),
+('GEO596', 'DESI406');
