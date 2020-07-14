@@ -1,0 +1,479 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+ECE 608 (Spring 2019) Assignment 2.
+Professor: Jason Au
+Student: Juan Manuel Gomez Gonzalez
+
+
+Information: 
+ECE 608 Assignment #2: T-tests and parametric assumptions 
+ 
+OVERVIEW The purpose of this assignment is to being to explore datasets in greater detail and start to generate inferences about group differences. You will be asked to explore a large dataset and evaluate which variables can be examined with parametric statistics and whether conditions differ from each other, statistically. 
+
+
+The libraries must be loaded first, in order to use the different functions present in this assignment.
+```{r}
+library(tidyverse)
+library(gapminder)
+library(car)
+library(e1071)
+library(grid)
+library(gridExtra)
+```
+
+Load a copy of the gapminder dataframe
+```{r}
+df <- gapminder
+head(df)
+```
+
+
+# Question 1
+Assess normality of Life Expectancy in the Americas in the year 2007. Include all appropriate plots and outcomes, and explain your decision of whether it is normal or not.
+
+## Q1 Solution 
+In order to assess normality of Life Expectancy in the Americas, it is imperative to only take into account the samples that are related to that continent. Thus, a filter should be applied first to the dataset:
+```{r}
+df.americas <- df %>% 
+        filter(continent  == 'Americas' & year == 2007)
+head(df.americas)
+```
+
+### Normality
+A way of checking for normality is using the basic statistical values/moments like mean, median, skewness and kurtosis of the distribution:
+```{r}
+writeLines(paste('Mean: ', mean(df.americas$lifeExp)))
+writeLines(paste('Median: ', median(df.americas$lifeExp)))
+writeLines(paste('Mean/Median: ', mean(df.americas$lifeExp)/median(df.americas$lifeExp)))
+writeLines(paste('Standard Deviation: ', sd(df.americas$lifeExp)))
+writeLines(paste('Skewness:', skewness(df.americas$lifeExp)))
+writeLines(paste('Kurtosis: ', kurtosis(df.americas$lifeExp)))
+```
+The mean and median are quite similar, which is what would be expected from a normal distribution. The skewness and kurtosis are in the range of -1 to 1, which would mean that the data behaves somewhat close to a normal distribution. Nonetheless, this is not enough to prove normality. The qq-plot and the histogram of the distribution can also be looked at:
+```{r, fig.width=10, fig.height = 6}
+plot_base <-  ggplot(df.americas, aes(sample = lifeExp))
+plotQQ <- plot_base + stat_qq(colour = "turquoise3") + stat_qq_line(colour = "turquoise4") + labs(y= "Sample Quantiles", x = "Theoretical Quantiles") + theme_light()
+
+plot_base <- ggplot(df.americas, aes(x = lifeExp))
+plotHist <-  plot_base + geom_histogram(aes(y = ..density..), bins = 10, colour = "turquoise3", fill = "turquoise4", alpha = 0.5, position = "identity") +
+        geom_density(alpha=0.1, color = "turquoise4") + labs(y= "Density", x = "Life Expectancy (Years)") + theme_light()
+
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 1. QQ-Plot (left) and Histogram (right) of the Life expectancy distribution for countries in the Americas in 2007", 
+           gp = gpar(fontsize=9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+plot_layout <- rbind(c(1,2), c(3,3))
+
+# Plot everything
+grid.arrange(plotQQ, plotHist, figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
+```
+
+According to the QQ-plot and the histogram in Figure 1, it seems like the data resembles a normal distribution.
+Finally, it is also possible to recur to a normality test for the distribution. There are many tests to check for normality, being Kolmogorov - Smirnov and Shapiro - Wilk the most common. In order to select one of these two, the dataset size should be taken into account:
+```{r}
+writeLines(paste("The total number of samples in the Americas dataset is", length(df.americas$lifeExp)))
+```
+
+As the total number of samples is 25, the Shapiro - Wilk normality test can be used. Statistical significance will be interpreted at alpha = 0.05.
+```{r}
+shapiro.test(x = df.americas$lifeExp)
+# ks.test(x = df.americas$lifeExp, y = "pnorm", mean = mean(df.americas$lifeExp), sd = sd(df.americas$lifeExp))
+```
+
+The null hypothesis cannot be rejected, and thus it cannot be concluded that the analyzed distribution is not normal (W=0.93, P=0.11), reaffirming what the plots previously concluded.
+
+
+# Question 2
+Are there ‘population’ outliers when comparing Asian countries to European countries in 1952? What are the different options to handle outliers, and what do you think is the best option to handle outliers when making this comparison?
+
+## Q2 Solution
+An approach to solving this question is by first creating a dataset which contains the continents of Asia and Europe in 1952:
+
+```{r}
+df.question2 <- df %>% 
+        filter(str_detect(continent,"Asia")|str_detect(continent,"Europe")) %>% 
+        filter(year == 1952)
+glimpse(df.question2)
+```
+For this solution, even though both European and Asian samples come from the same "Continent" variable, their outliers will be dealt by separate. This means that instead of obtaining the outliers for the European and Asian countries combined, they will be treated as separate variables each with its respective outlier calculation.
+
+### Outliers
+#### IQR Range (Tukey's Fences)
+After filtering the continents, the data can be plotted in order to visually identify the outliers:
+```{r, fig.width = 10, fig.height = 6, message=FALSE}
+q_Euro <-  fivenum(df.question2[df.question2$continent =='Europe',]$pop)
+q_Asia <-  fivenum(df.question2[df.question2$continent =='Asia',]$pop)
+IQR_Asia <- q_Asia[4] - q_Asia[2]
+IQR_Euro <- q_Euro[4] - q_Euro[2]
+# IQR_Euro = IQR(df.question2[df.question2$continent =='Europe',]$pop, type = 2) #Type = 2 is needed so that the IQR function calculates the Tukey fences instead of using the quantile function
+# IQR_Asia = IQR(df.question2[df.question2$continent =='Asia',]$pop, type = 2)
+plot_base <- ggplot(dat = df.question2, aes(x = continent, y = pop, fill = continent)) + labs(y = 'Population', x = 'Continent', fill = "Continent") + scale_y_continuous(labels = scales::comma)
+plot_base <- plot_base +
+        geom_hline(aes(yintercept = q_Asia[2] + IQR_Asia * (-1.5), linetype = "Asia -1.5 * IQR"), colour= 'red') +#The hlines get listed in the scale_linetype by alphabetical order
+        geom_hline(aes(yintercept = q_Asia[4] + IQR_Asia * (1.5), linetype = "Asia 1.5 * IQR"), colour= 'red') +
+        geom_hline(aes(yintercept = q_Euro[2] + IQR_Euro * (-1.5), linetype = "Euro -1.5 * IQR"), colour= 'blue') + 
+        geom_hline(aes(yintercept = q_Euro[4] + IQR_Euro * (1.5), linetype = "Euro 1.5 * IQR"), colour= 'blue') +
+        scale_linetype_manual(name = "IQR Ranges", values = c(2, 10, 2, 10), guide = guide_legend(override.aes = list(color = c("red", "red", "blue", "blue"))))
+
+
+plotBox <- plot_base + labs(subtitle = "Box Plot, IQR Ranges") + geom_boxplot() + coord_flip() + theme_light()
+plotViolin <- plot_base +  labs(subtitle = "Violin Plot, IQR Ranges") + geom_violin() + coord_flip() + theme_light() #+ geom_dotplot(binaxis='y', stackdir='center', dotsize=0.25) 
+
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 2. Box Plot (top) and Violin Plot (bottom) for the population in Europe and Asia.\nTukey's Fences (Q1 - 1.5 * IQR, Q3 + 1.5 * IQR) are also plotted for easier outlier visualization", 
+           gp = gpar(fontsize = 9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+#plot_layout <- rbind(c(1,2), c(3,3))
+
+# Plot everything
+grid.arrange(plotBox, plotViolin, figCaption, ncol = 1, heights = c(0.45, 0.45, 0.1))
+```
+Looking at the graphs in Figure 2, it can be seen that both continents have outliers. Mathematically, they can be computed as in Figure 2 by calculating the InterQuartile Range and multiplying by -1.5 (plus the quantile 1) or by 1.5 (plus the quantile 3) for the lower and upper boundaries, respectively.
+
+With this approach, it can be seen that the detected outliers are:
+```{r}
+df.question2 <- df.question2 %>% 
+        mutate(outlierIQR = if_else(str_detect(continent, "Europe") & (pop < q_Euro[2] - 1.5 * IQR_Euro | pop > q_Euro[4] + 1.5 * IQR_Euro), "yes",
+                                    if_else(str_detect(continent, "Asia") & (pop < q_Asia[2] - 1.5 * IQR_Asia | pop > q_Asia[4] + 1.5 * IQR_Asia),"yes","no")))
+head(filter(df.question2, outlierIQR=="yes"), 10)
+```
+
+#### Mean ± 3 Standard Deviations
+The outliers can also be calculated by considering them as the values outside of 3 standard deviations from the mean. This approach can be seen in Figure 3.
+```{r, fig.width = 10, fig.height = 6, message=FALSE}
+out_range_euro = 3 * sd(df.question2[df.question2$continent =='Europe',]$pop)
+mean_euro = mean(df.question2[df.question2$continent =='Europe',]$pop)
+out_range_asia = 3 * sd(df.question2[df.question2$continent =='Asia',]$pop)
+mean_asia = mean(df.question2[df.question2$continent =='Asia',]$pop)
+
+plot_base <- ggplot(dat = df.question2, aes(x = continent, y = pop, fill = continent)) + labs(y = "Population", x = "Continent", fill = "Continent") + scale_y_continuous(labels = scales::comma)
+plot_base <- plot_base +
+        geom_hline(aes(yintercept = mean_asia - out_range_asia, linetype = "Asia Mean - 3 * SD"), colour= 'red') +#The hlines get listed in the scale_linetype by alphabetical order
+        geom_hline(aes(yintercept = mean_asia + out_range_asia, linetype = "Asia Mean + 3 * SD"), colour= 'red') +
+        geom_hline(aes(yintercept = mean_euro - out_range_euro, linetype = "Europe Mean - 3 * SD"), colour= 'blue') + 
+        geom_hline(aes(yintercept = mean_euro + out_range_euro, linetype = "Europe Mean + 3 * SD"), colour= 'blue') +
+        scale_linetype_manual(name = "Mean ± 3SD Ranges", values = c(2, 10, 2, 10), guide = guide_legend(override.aes = list(color = c("red", "red", "blue", "blue"))))
+
+
+plotBox <- plot_base + labs(subtitle = "Box Plot, Mean ± 3SD Ranges") + geom_boxplot() + coord_flip() + theme_light()
+plotViolin <- plot_base + labs(subtitle = "Violin Plot, Mean ± 3SD Ranges") + geom_violin() + coord_flip() + theme_light() #+ geom_dotplot(binaxis='y', stackdir='center', dotsize=0.25) 
+
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 3. Box Plot (top) and Violin Plot (bottom) for the population in Europe and Asia.\nMean ± 3 Standard Deviations are also plotted for easier outlier visualization.", 
+           gp = gpar(fontsize = 9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+#plot_layout <- rbind(c(1,2), c(3,3))
+
+# Plot everything
+grid.arrange(plotBox, plotViolin, figCaption, ncol = 1, heights = c(0.45, 0.45, 0.1))
+```
+
+From the plots in Figure 3 it can be seen that the Tukey's Fences approach is more stringent, and thus defines more samples as outliers. With the 3 Standard Deviations (3SD) approach, two outliers are obtained:
+
+```{r}
+df.question2 <- df.question2 %>% 
+        mutate(outlierSD = if_else(str_detect(continent, "Europe") & pop> mean_euro + out_range_euro, "yes",if_else(str_detect(continent, "Asia") & pop>mean_asia + out_range_asia,"yes","no")))
+head(filter(df.question2, outlierSD=="yes"))
+```
+
+For the selection of the outlier detection technique, as the sample size can be considered enough that removing some samples is not a problem, the stringent approach (Tukey's Fences) can be considered more appropriate, based on the fact that removing outliers would help in making the data more generalizable and thus reducing bias.
+
+#### Outlier Handling
+Handling of these outliers can be done by either removing them, transforming the data, changing their value to one closer to the next non-outlier value, or evaluating the data using non parametric methods. For this exercise, using non parametric techniques could be considered out of the scope, especially because the outliers are only 2 to 6, depending on the technique used to evaluate them Transforming the data might work, but at the same time it also means that the meaning of the distribution that is being analyzed (population) would change or be completely lost, for the sake of preserving a couple of samples. Removing the outliers might work, but at the same time that would add a bias to the calculation. Changing their values to the next non-outlier value is also not completely correct as this would also change the distribution of the samples and might introduce a bias to the results, but it could be argued that this is the most sensible approach due to the circumstances.
+
+# Question 3 and 4
+For the following questions, if your data breaks assumptions, you must attempt to correct it using a data transformation. If no normality transformations help, proceed as if the assumptions are intact and state this in your response. 
+ 
+## Question 3
+Life Expectancy: Conduct the appropriate statistical test, demonstrate the underlying assumptions, plot the results, and briefly report the results in a ‘publishable’ format, to answer a research question of your choice phrased in the following format: Is life expectancy greater in [continent] compared to [continent] in [year]? 
+
+### Q3 Solution
+The question to analyze will be: Is life expectancy greater in Asia compared to Africa in 1967?
+The data will be analyzed for normality and will be compared using a t-test. Statistical significance will be interpreted at alpha = 0.05. If the data is found to not be normal, a logarithmic transformation will be used.
+The first step is to create the dataframe with the relevant data:
+```{r}
+df.question3 <- df %>% 
+        filter(str_detect(continent,"Asia")|str_detect(continent,"Africa")) %>% 
+        filter(year == 1967)
+glimpse(df.question3)
+```
+
+### Normality
+The dataset should be checked for normality. If deviations from normality are observed, a log transform will be used to condition the data.
+
+```{r}
+writeLines("Stats:")
+writeLines("\n----------------------\n")
+for (val in c("Africa", "Asia")){
+        writeLines(val)
+        test <- df.question3[df.question3$continent==val,]
+        writeLines(paste('-Mean: ', mean(test$lifeExp)))
+        writeLines(paste('-Median: ', median(test$lifeExp)))
+        writeLines(paste('-Mean/Median: ', mean(test$lifeExp)/median(test$lifeExp)))
+        writeLines(paste('-Standard Deviation:', sd(test$lifeExp)))
+        writeLines(paste('-Skewness:', skewness(test$lifeExp)))
+        writeLines(paste('-Kurtosis: ', kurtosis(test$lifeExp)))
+        writeLines("\n----------------------\n")
+}
+```
+
+According to the statistical values of the distributions, it seems like both continents have a normal distribution.
+
+Next, the QQ-Plot and histogram of the dataset can be visualized in Figure 4:
+
+```{r, fig.width=10, fig.height = 6}
+plot_base <-  ggplot(df.question3, aes(sample = lifeExp, color = factor(continent)))
+plotQQ <- plot_base + stat_qq() + stat_qq_line() +
+        labs(y= "Sample Quantiles", x = "Theoretical Quantiles", color = "Continent:") +
+        theme_light() +
+        theme(legend.position="bottom")
+
+plot_base <- ggplot(df.question3, aes(x = lifeExp, color = factor(continent), fill = factor(continent)))
+plotHist <-  plot_base + geom_histogram(aes(y = ..density..), bins = 10, alpha = 0.6, position = "identity") + geom_density(alpha=0.1) +
+        labs(y= "Density", x = "Life Expectancy (Years)") +
+        scale_fill_discrete(name = "Continent") + 
+        scale_color_discrete(name = "Continent") +
+        theme_light() +
+        theme(legend.position="bottom") 
+
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 4. QQ-Plot (left) and histogram (right) of the Life expectancy distribution for each continent", 
+           gp = gpar(fontsize=9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+plot_layout <- rbind(c(1,2), c(3,3))
+
+# Plot everything
+grid.arrange(plotQQ, plotHist, figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
+```
+
+The QQ-Plot in Figure 4 seems to be in accordance with the previously defined statistics. Nonetheless, the histogram shows that the data distribution for Asia does not completely look like a normal distribution.
+
+```{r}
+writeLines(paste("Total number of samples in Africa:", length(df.question3[df.question3$continent=="Africa",]$lifeExp)))
+writeLines(paste("Total number of samples in Asia:",length(df.question3[df.question3$continent=="Asia",]$lifeExp)))
+```
+
+Normality of the life expectancy scores will be checked with the Kolmogorov - Smirnov (KS) test for Africa and Shapiro - Wilk for Asia.
+
+```{r}
+writeLines("-----------------------------------------------------------------------\n")
+writeLines("\n----------------------\n")
+writeLines("Africa")
+test <- df.question3[df.question3$continent=="Africa",]
+ks.test(x = test$lifeExp, y = "pnorm", mean = mean(test$lifeExp), sd = sd(test$lifeExp))
+writeLines("\n----------------------\n")
+writeLines("-----------------------------------------------------------------------\n")
+writeLines("\n----------------------\n")
+writeLines("Asia")
+test <- df.question3[df.question3$continent=="Asia",]
+shapiro.test(x = test$lifeExp)
+writeLines("\n----------------------\n")
+writeLines("\n-----------------------------------------------------------------------")
+```
+The null hypothesis cannot be discarded, and thus the samples for the African continent follow a normal distribution (D=0.07, P=0.96), as well as the Asian continent (W=0.98, P=0.73).
+Based on these conclusions, it will be assumed that the data follows a normal distribution.
+
+### Outliers
+Based on the assumptions and conclusions obtained from the previous question, Tukey's fences and changing the values of the outliers to the closest non-outlier will be used as the techniques for the outlier detection and handling.
+```{r, fig.width = 10, fig.height = 6, message=FALSE}
+q_Asia <-  fivenum(df.question3[df.question3$continent =='Asia',]$lifeExp)
+q_Africa <-  fivenum(df.question3[df.question3$continent =='Africa',]$lifeExp)
+IQR_Africa <- q_Africa[4] - q_Africa[2]
+IQR_Asia <- q_Asia[4] - q_Asia[2]
+
+plot_base <- ggplot(dat = df.question3, aes(x = continent, y = lifeExp, fill = continent)) + labs(y = 'Life Expectancy (Years) ', x = 'Continent', fill = "Continent") + scale_y_continuous(labels = scales::comma)
+plot_base <- plot_base +
+        geom_hline(aes(yintercept = q_Africa[2] + IQR_Africa * (-1.5), linetype = "Africa Q1 - 1.5 * IQR"), colour= 'red') +#The hlines get listed in the scale_linetype by alphabetical order
+        geom_hline(aes(yintercept = q_Africa[4] + IQR_Africa * (1.5), linetype = "Africa Q3 + 1.5 * IQR"), colour= 'red') +
+        geom_hline(aes(yintercept = q_Asia[2] + IQR_Asia * (-1.5), linetype = "Asia Q1 - 1.5 * IQR"), colour= 'blue') + 
+        geom_hline(aes(yintercept = q_Asia[4] + IQR_Asia * (1.5), linetype = "Asia Q3 + 1.5 * IQR"), colour= 'blue') +
+        scale_linetype_manual(name = "IQR Ranges", values = c(2, 10, 2, 10), guide = guide_legend(override.aes = list(color = c("red", "red", "blue", "blue"))))
+
+plotBox <- plot_base + geom_boxplot() + coord_flip() + theme_light()
+plotViolin <- plot_base +  labs(subtitle = "Violin Plot, IQR Ranges") + geom_violin() + coord_flip() + theme_light() #+ geom_dotplot(binaxis='y', stackdir='center', dotsize=0.25) 
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 5. Box Plot (top) and Violin Plot (bottom) for the Life Expectancy in Asia and Africa.\nTukey's Fences (Q1 - 1.5 * IQR, Q3 + 1.5 * IQR) are also plotted for easier outlier visualization", 
+           gp = gpar(fontsize = 9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Plot everything
+grid.arrange(plotBox, plotViolin, figCaption, ncol = 1, heights = c(0.45, 0.45, 0.1))
+```
+The outliers can be then calculated mathematically using:
+```{r}
+df.question3 <- df.question3 %>% 
+        mutate(outlierIQR = if_else(str_detect(continent, "Asia") & (lifeExp < q_Asia[2] - 1.5 * IQR_Asia | lifeExp > q_Asia[4] + 1.5 * IQR_Asia), "yes",
+                                    if_else(str_detect(continent, "Africa") & (lifeExp < q_Africa[2] - 1.5 * IQR_Africa | lifeExp > q_Africa[4] + 1.5 * IQR_Africa),"yes","no")))
+head(filter(df.question3, outlierIQR=="yes"), 10)
+```
+Looking at the plots in Figure 5 and the previous result, the data seems to not present outliers.
+
+### Equality of Variances
+Equality of the variances must also be tested, in order to be able of using a t-test:
+```{r}
+leveneTest(lifeExp~continent, data = df.question3, center = "mean")
+```
+Levene's Test indicates that the variances are equal (F=9.83, P<0.05).
+
+### t-test
+Afterwards, as the distributions are normal, a t-test can be employed to compare both groups.
+A two-tailed, non-paired t-test will be used to examine the differences in life expectancy between the two continents in 1967.
+```{r}
+t.test(formula = lifeExp~continent, data = df.question3, alternative = "two.sided", var.equal = TRUE, paired = FALSE)
+```
+Life expectancy in Africa was found to be lower compared to that of Asia during 1967 (45.33 ± 6.08 vs 54.66 ± 9.65 years, t=-12.61, P<0.01)
+
+## Question 4
+Wealth: Conduct the appropriate statistical test, demonstrate the underlying assumptions, plot the results, and briefly report the results in a ‘publishable’ format, to answer a research question of your choice phased in the following format: Does GDP increase between [year] and [year] in [continent]?
+
+### Q4 Solution
+The question to analyze will be: Does GDP increase between 1992 and 1997 in Europe?
+The data will be analyzed for normality and will be compared using a t-test. Statistical significance will be interpreted at alpha = 0.05. If the data is found to not be normal, a logarithmic transformation will be used.
+
+First, the creation of a dataframe which includes the GDP per Capita values for the European continent for the years 1992 and 1997 must be obtained.
+```{r}
+y1=1992
+y2=1997
+df.question4 <- df %>% 
+        filter(str_detect(continent,"Europe")) %>% 
+        filter(year == y1 | year == y2)
+glimpse(df.question4)
+```
+#### Normality
+The dataset should be checked for normality. If deviations from normality are observed, a log transform will be used to condition the data.
+```{r}
+writeLines("Stats:")
+writeLines("\n----------------------\n")
+for (val in c(toString(y1), toString(y2))){
+        writeLines(val)
+        test <- df.question4[df.question4$year==val,]
+        writeLines(paste('-Mean: ', mean(test$gdpPercap)))
+        writeLines(paste('-Median: ', median(test$gdpPercap)))
+        writeLines(paste('-Mean/Median: ', mean(test$gdpPercap)/median(test$gdpPercap)))
+        writeLines(paste('-Standard Deviation:', sd(test$gdpPercap)))
+        writeLines(paste('-Skewness:', skewness(test$gdpPercap)))
+        writeLines(paste('-Kurtosis: ', kurtosis(test$gdpPercap)))
+        writeLines("\n----------------------\n")
+}
+```
+
+According to the statistical values of the distributions, it seems like the distributions might follow a normal distribution, although they seem to present a high negative kurtosis.
+
+Next, the QQ-Plot and histogram of the dataset will be analyzed:
+```{r, fig.width=10, fig.height = 6}
+plot_base <-  ggplot(df.question4, aes(sample = gdpPercap, color = factor(year)))
+plotQQ <- plot_base + stat_qq() + stat_qq_line() + labs(y= "Sample Quantiles", x = "Theoretical Quantiles", color = "Year:") + theme_light() + theme(legend.position="bottom")
+
+plot_base <- ggplot(df.question4, aes(x = gdpPercap, color = factor(year), fill = factor(year)))
+plotHist <-  plot_base + geom_histogram(aes(y=..density..), bins = 20, alpha = 0.5, position = "identity") +
+        geom_density(alpha=0.2) + labs(y= "Count", x = "GDP Per Capita (International Dollars)") +
+        scale_color_discrete(name = "Year") +
+        scale_fill_discrete(name = "Year") +
+        theme_light() +
+        theme(legend.position="bottom")
+
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 6. QQ-Plot (left) and histogram (right) of the GDP Per Capita distribution (in International Dollars) of the Americas for each year", 
+           gp = gpar(fontsize=9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+plot_layout <- rbind(c(1,2), c(3,3))
+
+# Plot everything
+grid.arrange(plotQQ, plotHist, figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
+```
+The QQ-Plot from Figure 6 show that the data adheres to a normal distribution from the Theoretical Quantiles of -1 up to almost 1, but diverges before and after those points. The histogram also indicate that the distributions do not completely follow a normal distribution.
+
+In order to test normality, it is imperative to know the data sie of the samples:
+```{r}
+writeLines(paste("Total number of samples for", toString(y1),":", length(df.question4[df.question4$year==y1,]$gdpPercap)))
+writeLines(paste("Total number of samples for", toString(y2),":", length(df.question4[df.question4$year==y2,]$gdpPercap)))
+```
+
+Due to the sample size, normality of the GDP Per Capita scores will be checked with the Shapiro - Wilk normality test. Statistical significance will be interpreted at alpha = 0.05. If deviations from normality are observed, a log transform will be used to condition the data.
+```{r}
+writeLines("-----------------------------------------------------------------------\n")
+writeLines("Kolmogorov - Smirnov Normality Tests:")
+writeLines("\n----------------------\n")
+writeLines(toString(y1))
+test <- df.question4[df.question4$year==y1,]
+shapiro.test(x = test$gdpPercap)
+writeLines("\n----------------------\n")
+writeLines(toString(y2))
+test <- df.question4[df.question4$year==y2,]
+shapiro.test(x = test$gdpPercap)
+writeLines("\n----------------------\n")
+writeLines("\n-----------------------------------------------------------------------")
+```
+The null hypothesis needs not to be discarded for the year 1992, and thus it can be concluded that it follows a normal distribution (W=0.94, P=0.12). The same applies for 1997 (D=0.94, P=0.10).
+
+### Outliers
+Based on the assumptions and conclusions obtained from Question 2, Tukey's fences and changing the values of the outliers to the closest non-outlier will be used as the techniques for the outlier detection and handling, respectively.
+```{r, fig.width = 10, fig.height = 6, message=FALSE}
+q_y1 <-  fivenum(df.question4[df.question4$year==y1,]$gdpPercap)
+q_y2 <-  fivenum(df.question4[df.question4$year==y2,]$gdpPercap)
+IQR_y1 <- q_y1[4] - q_y1[2]
+IQR_y2 <- q_y2[4] - q_y2[2]
+
+plot_base <- ggplot(dat = df.question4, aes(x = factor(year), y = gdpPercap, fill = factor(year))) + labs(y = 'GDP Per Capita (International Dollars)', x = 'Year', fill = "Year")
+plot_base <- plot_base +
+        geom_hline(aes(yintercept = q_y1[2] + IQR_y1 * (-1.5), linetype = paste(toString(y1),"Q1 - 1.5 * IQR")), colour= 'red') +#The hlines get listed in the scale_linetype by alphabetical order
+        geom_hline(aes(yintercept = q_y1[4] + IQR_y1 * (1.5), linetype = paste(toString(y1),"Q3 + 1.5 * IQR")), colour= 'red') +
+        geom_hline(aes(yintercept = q_y2[2] + IQR_y2 * (-1.5), linetype = paste(toString(y2),"Q1 - 1.5 * IQR")), colour= 'blue') + 
+        geom_hline(aes(yintercept = q_y2[4] + IQR_y2 * (1.5), linetype = paste(toString(y2),"Q3 + 1.5 * IQR")), colour= 'blue') +
+        scale_linetype_manual(name = "IQR Ranges", values = c(2, 10, 2, 10), guide = guide_legend(override.aes = list(color = c("red", "red", "blue", "blue"))))
+
+plotBox <- plot_base + labs(subtitle = "Box Plot, IQR Ranges") + geom_boxplot() + coord_flip() + theme_light()
+plotViolin <- plot_base +  labs(subtitle = "Violin Plot, IQR Ranges") + geom_violin() + coord_flip() + theme_light() #+ geom_dotplot(binaxis='y', stackdir='center', dotsize=0.25) 
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 7. Box Plot (top) and Violin Plot (bottom) for the GDP Per Capita for both years.\nTukey's Fences (Q1 - 1.5 * IQR, Q3 + 1.5 * IQR) are also plotted for easier outlier visualization", 
+           gp = gpar(fontsize = 9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Plot everything
+grid.arrange(plotBox, plotViolin, figCaption, ncol = 1, heights = c(0.45, 0.45, 0.1))
+```
+The outliers can be then calculated mathematically using:
+```{r}
+df.question4 <- df.question4 %>% 
+        mutate(outlierIQR = if_else(year==y1 & (gdpPercap < q_y1[2] - 1.5 * IQR_y1 | gdpPercap > q_y1[4] + 1.5 * IQR_y1), "yes",
+                                    if_else(year==y2 & (gdpPercap < q_y2[2] - 1.5 * IQR_y2 | gdpPercap > q_y2[4] + 1.5 * IQR_y2),"yes","no")))
+head(filter(df.question4, outlierIQR=="yes"), 10)
+```
+Looking at the plots in Figure 7 and the previous result, the data seems to not present outliers.
+
+### Equality of Variances
+Equality of the variances must also be tested, in order to be able of using a t-test:
+```{r}
+leveneTest(gdpPercap~factor(year), data = df.question4, center = "mean")
+```
+Levene's Test indicates that the variances are not equal (F=0.49, P=0.49).
+
+### t-test
+A two-tailed, paired t-test will be used to examine the differences in GDP per Capita in the Americas between 1992 and 1997.
+```{r}
+t.test(formula = gdpPercap~factor(year), data = df.question4, alternative = "two.sided", var.equal = FALSE, paired = TRUE)
+```
+
+GDP Per Capita in Europe was found to increase from 1992 to 1997 by a mean difference of 2015.21 (t=-6.02, P<0.01).
