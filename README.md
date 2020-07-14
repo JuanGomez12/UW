@@ -13,7 +13,7 @@ Electrical and Computer Engineering:
    
  - ECE650: Methods and Tools for Software Engineering
    - Work done in Python and C++
-   - Use of Linux commands like Pipe and Fork
+   - Use of Linux Pipes and Multithreading
    - App to calculate the optimal camera number and position to cover each intersection of a system of streets given as coordinates. The intersections were analyzed as nodes in a graph and later converted to a system that could be input into a SAT Solver
    
  - ECE657A: Data and Knowledge Modelling and Analysis
