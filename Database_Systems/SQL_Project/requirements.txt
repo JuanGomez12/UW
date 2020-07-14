@@ -1,0 +1,4 @@
+certifi==2019.3.9
+mysql-connector-python==8.0.15
+tabulate
+pandas == 0.24.2
