@@ -1,5 +1,5 @@
 # ECE 656 Project.
-# Juan Manuel Gomez Gonzalez (UWID 20805369) and Natalia Hoyos Velasquez (UWID 20805370)
+# Juan Manuel Gomez Gonzalez and Natalia Hoyos Velasquez
 
 
 # The code for changing pages was derived from: 
