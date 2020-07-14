@@ -1,0 +1,200 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+ECE 608 (Spring 2019) Assignment 1.
+Professor: Jason Au
+Student: Juan Manuel Gomez Gonzalez
+UW Student ID: 20805369
+
+# Question 1
+1. Read in .csv data from the github address into a data frame (call it ‘bg’) and print the
+structure of the data so you can see an overview at a glance.
+• To quickly appreciate the scope of the dataset, use ggplot2 to create a
+geom_point plot of the ‘average_rating’ (y-axis) against the ‘year_published’ (xaxis) and colour the data in red with a transparency (i.e., alpha value) gradient to
+represent how many users rated the game (‘users_rated’ variable; i.e., ratings
+based on less users have more transparent points).
+• Repeat this plot with geom_jitter and display both plots together side-by-side
+using the grid.arrange function from the gridExtra package. What is the
+difference between plots and when would one be more appropriate? [5 marks]
+
+## Solution
+It is necessary to load the tidyverse and gridExtra libraries in order to be able to use them during the solution of this assignment. The grid library is also needed in order to create the caption for the third question.
+
+```{r, results='hide'}
+library(tidyverse)
+library(grid)
+library(gridExtra)
+```
+
+Taking a look at the dataset using a text processing program, it can be seen that the dataset consists of 10,532 samples with 19 variables. It can also be seen that the majority of the variables fall into the integer or string datatype, so they can be parsed into the "bg" variable as type integer or character, respectively. The exception to the former statement is average_rating, which uses decimals and thus should be parsed as a float (or double according to readr). Unneeded columns are commented so that they are not loaded.
+
+```{r}
+bg <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-03-12/board_games.csv", col_types = cols_only(
+game_id = col_integer(),
+#description = col_character(),
+#image = col_character(),
+max_players = col_integer(),
+max_playtime = col_integer(),
+min_age = col_integer(),
+min_players = col_integer(),
+min_playtime = col_integer(),
+name = col_character(),
+playing_time = col_integer(),
+#thumbnail = col_character(),
+year_published = col_integer(),
+artist = col_character(),
+category = col_character(),
+compilation = col_character(),
+designer = col_character(),
+expansion = col_character(),
+family = col_character(),
+mechanic = col_character(),
+publisher = col_character(),
+average_rating = col_double(),
+users_rated = col_integer()))
+```
+
+It is possible to use "dplyr::tbl_df()" to display the information in bg as a table, but as it contains a considerable amount of characters for some of its variables, it can be computationally expensive to display. Therefore, it is more appropriate to display it using "dplyr::glimpse()".
+
+```{r}
+#dplyr::tbl_df(bg)
+dplyr::glimpse(bg)
+```
+
+The "head()" function can also be used to visualize the first elements of the dataset:
+```{r}
+head(bg)
+```
+
+The dataset seems to be comprised of information related to a list of board games with attributes like the name of the game, how many players can play the game simultaneously, etc.
+The first part of the assignment asks for the creation of two scatterplots (with and without an added jitter) in which the x axis indicates the year of publication of the game, while the average rating of it is displayed in the y axis. The number of users that rate the game also need to be displayed, as a z axis in the form of the transparency of each data point in the plot.
+
+```{r, fig.width = 10, fig.height = 6}
+plot_base <- ggplot(bg, aes(year_published, average_rating, alpha = users_rated)) + labs(x = "Year Published", y = "Average Rating", alpha='Number of users\nthat rated the game')
+plotScatter <-  plot_base + geom_point(colour = "red") + theme_light()
+plotJitter <-  plot_base + geom_jitter(colour = "red") + theme_light()
+grid.arrange(plotScatter, plotJitter, nrow = 2, ncol = 1)
+```
+
+The correct way of displaying the data is the first plot (using no jitter) as the year is the only information available in the data (without the month and day, and thus making all the board games be supposedly released on the same date of each year). However, it would be more realistic to use the plot with jitter as it would reflect how in reality the board games should have been released (during the course of each year instead of at one specific day of it), which would help avoid create certain assumptions from viewing the dataset in such an organized way.
+
+# Question 2
+To explore this dataset further, you will have to clean up the ‘category’ variable a bit. I
+would like you to create a new data frame (call it bg2) with the following instructions:
+• Filter the data so you only include board games that are ‘Card Game’, or ‘Dice’
+type games;
+• Create a new categorical variable called ‘type’ that classifies games into either
+Card, Dice, or Both;
+• Plot the following three types of graphs to show ‘type’ on the x-axis and
+‘average_rating’ on the y-axis: geom_jitter, geom_boxplot, and geom_violin. Plot
+these together using the grid.arrange function from the gridExtra package.
+In a few sentences, describe how each type of plot provides unique information
+about the dataset. Is one superior to the others? [7 marks]
+
+## Solution
+The first step to answer this question is to create bg2, with a filtering applied to the data so that it only contains board games that use Cards or Dice as part of its gameplay. A new variable called type should also be created per the instructions in the second question.
+```{r}
+bg2 <- bg %>% filter(str_detect(category, 'Card Game|Dice')) %>% 
+  mutate(type = ifelse(str_detect(category, 'Card Game') & str_detect(category, 'Dice'), "Both", ifelse(str_detect(category, 'Card Game'), "Card", "Dice")))
+dplyr::glimpse(bg2)
+```
+
+
+Afterwards, the different graphs can be plotted and compared:
+```{r, fig.width = 10, fig.height = 6}
+plot_base2 <- ggplot(bg2, aes(type, average_rating, colour = factor(type))) + labs(x = "Game Type", y = "Average Rating")
+plotJitter <-  plot_base2 + geom_jitter() + theme_light() + theme(legend.position = "none")
+plotBox <-  plot_base2 + geom_boxplot() + theme_light() + theme(legend.position = "none", axis.title.y = element_blank())
+plotViolin <-  plot_base2 + geom_violin() + theme_light() + theme(legend.position = "none", axis.title.y = element_blank())
+grid.arrange(plotJitter,plotBox,plotViolin, nrow = 1, ncol = 3)
+```
+The jitter plot allows for the viewing of the data points distribution more clearly, as it represents each datapoint from the set. The boxplot allows for an easier view of the different inter quartile ranges, while also showing information about the outliers of each game type. The violin plot allows for a better view of the data distribution, specifically its density, because it shows a representation for where each datapoint is located similar to the jitter plot, but without saturating the plot. According to these statements, there is not necessarily one that is better than the rest, and it can be considered that each has its own advantages. It is up to the person conveying the information to select the correct plot to use in order to express appropriately their results.
+
+# Question 3
+Finally, manipulate the original data to answer your own question in this generic
+format: Ranking the games from best (1) to worst (10,532) based on their
+average_rating, are games that are [condition] ranked higher than [condition]? (e.g., are
+games longer than 120 minutes ranked higher than games shorter than 120 minutes?)
+Be creative! Create one plot using ggplot2 to represent this question. To make this a
+publishable plot, make sure to have:
+• Labelled axes and axis units (if applicable)
+• Legend
+• Appropriate graph type
+• Appropriate axis scales
+• Accompanying Figure caption in your R Notebook (something similar to what you
+would see in a research paper underneath a figure). [5 marks]
+
+## Solution
+For this question, bg3 is created with a ranking implemented using the average_rating. The sorting ("arrange") is not really needed, but it helps in the visualization of the coincidence of the ranking and the largest average rating.
+```{r}
+bg3 <- bg  %>% 
+  arrange(desc(average_rating)) %>% 
+  #mutate(ranking = dplyr::row_number()) %>%
+  #mutate(ranking = dplyr::min_rank(desc(average_rating))) %>% 
+  mutate(ranking = dplyr::dense_rank(desc(average_rating))) %>% 
+  mutate(category_number = ifelse(is.na(category), as.double(0), str_count(category, ",") + 1)) %>%
+  mutate(expansion_number = ifelse(is.na(expansion), as.double(0), str_count(expansion, ",") + 1)) %>%
+  mutate(publisher_number = ifelse(is.na(publisher), as.double(0), str_count(publisher, ",") + 1))
+dplyr::glimpse(bg3)
+```
+
+Interpreting information from a graph can be somewhat difficult when the data is nos sufficiently sparse. In this specific case, the majority of the variables have a condensed density (possibly because the data has some outliers), making the visualization of the rest of the data more difficult. An example of this can be seen in Figures 1 to 3. 
+
+```{r, warning=FALSE, fig.width = 10, fig.height = 10}
+# First find the limits for the scales of the different plots (pseudo outlier removal)
+n <- length(bg3$category_number) #Find the length of the df
+nth_number = n - 6 # Number of outliers to remove. If n-1, use second largest value, if n-2 use third largest value, and so on
+cat_num_lim=sort(bg3$category_number,partial=nth_number)[nth_number] #Find the second largest value of category_number
+exp_num_lim=sort(bg3$expansion_number,partial=nth_number)[nth_number] #Find the second largest value of expansion_number
+pub_num_lim=sort(bg3$publisher_number,partial=nth_number)[nth_number] #Find the second largest value of publisher_number
+
+#Then create the plots with the limits
+plot_base_cat <- ggplot(bg3, aes(x = ranking, y = category_number, colour = Legend)) + labs(y= "Number of categories", x = "Ranking", caption = 'Figure 1. Scatterplot of the relation between ranking and number of categories a game has') + ylim(0, cat_num_lim)
+plotScatter_category <-  plot_base_cat + geom_point(colour = "turquoise4", alpha=0.25) + geom_smooth(aes(colour = "Trendline"), method = "lm", alpha = 0.5) +
+  scale_colour_manual(values = "Red") + theme_light() + theme(plot.caption = element_text(hjust = 0))
+
+plot_base_exp <- ggplot(bg3, aes(x = ranking, y = expansion_number, colour = Legend)) + labs(y= "Number of expansions", x = "Ranking", caption = 'Figure 2. Scatterplot of the relation between ranking and number of expansions a game has') + ylim(0, exp_num_lim)
+plotScatter_expansion <-  plot_base_exp + geom_point(colour = "forestgreen", alpha=0.25) + geom_smooth(aes(colour = "Trendline"), method = "lm", alpha = 0.5) +
+  scale_colour_manual(values = "Red") + theme_light() + theme(plot.caption = element_text(hjust = 0))
+
+plot_base_pub <- ggplot(bg3, aes(x = ranking, y = publisher_number, colour = Legend)) + labs(y= "Number of Publishers", x = "Ranking", caption = 'Figure 3. Scatterplot of the relation between ranking and number of publishers a game has') + ylim(0, pub_num_lim)
+plotScatter_publisher <-  plot_base_pub + geom_point(colour = "darkgray", alpha=0.25) + geom_smooth(aes(colour = "Trendline"), method = "lm", alpha = 0.5) +
+  scale_colour_manual(values = "Red") + theme_light() + theme(plot.caption = element_text(hjust = 0))
+
+#Then plot them
+grid.arrange(plotScatter_category,plotScatter_expansion,plotScatter_publisher, nrow=3, ncol=1)
+```
+
+
+Moreover, there seems to be no discernible pattern in the data, except for the case of year of publishing. Based on this, an interesting question can then be formulated as: Are the games published after the year 2000 better ranked than the games created before the second millennium?
+
+```{r, fig.width = 12, fig.height = 6}
+# Create the new variable
+bg3 <- bg3 %>% 
+  mutate(after2k = ifelse(year_published>=2000, ">=2000", "<2000"))
+# Create the scatter plot
+plot_base3 <- ggplot(bg3, aes(x = ranking, y = year_published)) + theme_light() 
+plotScatter <-  plot_base3 + geom_point(colour = "turquoise4", alpha=0.25) + geom_smooth(aes(colour = "Trendline"), method = "lm", alpha = 0.5) +
+  scale_colour_manual(values = "Red") + labs(y= "Year Published", x = "Ranking", colour = "Legend") + theme_light()
+
+# Create the violin plot
+plot_base3 <- ggplot(bg3, aes(x = after2k, y = ranking , colour = factor(after2k))) + theme_light()
+plotViolin <-  plot_base3 + geom_violin() + labs(x = "Year of Publishing", y = "Ranking", colour = "Legend")
+
+# Create the caption. This part is based on an answer given by hrbmstr in StackOverflow: https://stackoverflow.com/a/41106250
+figCaption <- textGrob("Figure 4. Scatterplot (left) and Violin plot (right) for the relation between Ranking and the Year of Publishing of a board game", 
+           gp = gpar(fontsize=9, col = "#2b2b2b"), 
+           x = unit(0.005, "npc"), just = c("left", "bottom"))
+
+# Build the layout
+plot_layout <- rbind(c(1,2), c(3,3))
+
+# Plot everything
+grid.arrange(plotScatter,plotViolin,figCaption, layout_matrix = plot_layout, heights = c(0.95, 0.05))
+```
+
+According to the scatterplot, it seems that there is a larger concentration of games made after the year 2000 in the first part of the rankings, which would support the question formulated before the plot. The violin plot shows that games published after the year 2000 have a higher concentration of datapoints in the lower rankings, while the board games published before the second millennium have a higher concentration on the lower rankings of the dataset. Nonetheless, it would be better to employ a statistical test to corroborate these empirical results.
