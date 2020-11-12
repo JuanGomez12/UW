@@ -1,6 +1,6 @@
-ECE656 Winter 2019 Project
+# Lahman Baseball Hall of Fame Data Mining using SQL and Python
 
-Natalia Hoyos Velasquez and Juan Manuel Gomez Gonzalez.
+Authors: Natalia Hoyos Velasquez and Juan Manuel Gomez Gonzalez.
 
 
 This project looks to predict the probability of a player from the Lahman database to be nominated to the Hall of Fame, using a Naive Bayes classifier implemented in SQL using a GUI designed in Python. This particular exercise disregards if the player is inducted or not and focuses on predicting if the player was nominated. The Python portion is only for visualizing the data, the predictions are calculated using SQL directly.
