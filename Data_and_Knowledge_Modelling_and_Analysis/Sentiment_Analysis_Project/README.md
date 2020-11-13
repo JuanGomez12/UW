@@ -1,3 +1,4 @@
+# Sentiment Analysis of a Medication Review Website using NLTK and GloVe
 The complete code of the project can be found in the five accompanying Jupyter notebooks. The order is representative with the order it is explained in the report.
 
 - 1_ECE657A_Project_G12_ML.ipynb: Jupyter notebook with the VADER and the different machine learning classification algorithms. For it to work correctly needs to have the option of downloading NLTK files, like the stop words and the VADER sentiment classifier.
